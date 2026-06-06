@@ -52,7 +52,7 @@ function buildStructuralSelector(el: Element): string {
         (c) => c.tagName === current!.tagName,
       );
       const index = siblings.indexOf(current) + 1;
-      parts.unshift(`${tag}:nth-child(${index})`);
+      parts.unshift(`${tag}:nth-of-type(${index})`);
     } else {
       parts.unshift(tag);
     }
@@ -72,21 +72,24 @@ function buildStructuralSelector(el: Element): string {
 
 function addParentContext(el: Element, selector: string): string {
   let current = el.parentElement;
-  const result = selector;
+  let result = selector;
 
   while (current && current !== document.documentElement) {
-    // Try adding parent's id if semantic
+    let prefix = '';
+
     if (current.id && isSemanticId(current.id)) {
-      const candidate = `#${CSS.escape(current.id)} > ${result}`;
-      if (isUnique(candidate)) return candidate;
+      prefix = `#${CSS.escape(current.id)}`;
+    } else {
+      const semanticClasses = Array.from(current.classList).filter(isSemanticClass);
+      if (semanticClasses.length > 0) {
+        prefix = `${current.tagName.toLowerCase()}.${semanticClasses.join('.')}`;
+      }
     }
 
-    // Try adding parent's semantic classes
-    const semanticClasses = Array.from(current.classList).filter(isSemanticClass);
-    if (semanticClasses.length > 0) {
-      const tag = current.tagName.toLowerCase();
-      const candidate = `${tag}.${semanticClasses.join('.')} > ${result}`;
+    if (prefix) {
+      const candidate = `${prefix} > ${result}`;
       if (isUnique(candidate)) return candidate;
+      result = candidate;
     }
 
     current = current.parentElement;
@@ -103,7 +106,7 @@ export function generateCssSelector(el: Element): {
   for (const attr of DATA_ATTRS) {
     const val = el.getAttribute(attr);
     if (val) {
-      const s = `[${attr}="${val}"]`;
+      const s = `[${attr}=${CSS.escape(val)}]`;
       if (isUnique(s)) return { selector: s, confidence: 'data-attr' };
     }
   }
@@ -117,14 +120,21 @@ export function generateCssSelector(el: Element): {
   // Priority 3: aria-label + tag name
   const ariaLabel = el.getAttribute('aria-label');
   if (ariaLabel) {
-    const s = `${el.tagName.toLowerCase()}[aria-label="${ariaLabel}"]`;
+    const s = `${el.tagName.toLowerCase()}[aria-label=${CSS.escape(ariaLabel)}]`;
+    if (isUnique(s)) return { selector: s, confidence: 'aria' };
+  }
+
+  // Priority 3b: role attribute
+  const role = el.getAttribute('role');
+  if (role) {
+    const s = `[role=${CSS.escape(role)}]`;
     if (isUnique(s)) return { selector: s, confidence: 'aria' };
   }
 
   // Priority 4: form name attribute
   const name = el.getAttribute('name');
   if (name && isFormElement(el)) {
-    const s = `${el.tagName.toLowerCase()}[name="${name}"]`;
+    const s = `${el.tagName.toLowerCase()}[name=${CSS.escape(name)}]`;
     if (isUnique(s)) return { selector: s, confidence: 'name' };
   }
 

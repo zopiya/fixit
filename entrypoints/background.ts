@@ -1,6 +1,9 @@
 import { MessageType } from '../src/shared/types';
 import type { FixItAnnotation, Message } from '../src/shared/types';
 import { normalizeUrl, getAnnotations, addAnnotation, deleteAnnotation, clearAnnotations, setAnnotations } from '../src/shared/storage';
+import { getSettings } from '../src/shared/settings';
+import { setIconActive } from '../src/shared/icon-state';
+import { t, setLocale, detectLocale } from '../src/shared/i18n';
 
 async function notifySidePanel(tabId: number): Promise<void> {
   try {
@@ -21,6 +24,29 @@ async function notifySidePanel(tabId: number): Promise<void> {
 export default defineBackground(() => {
   const activeTabs = new Map<number, boolean>();
 
+  // Open playground on first install + context menu
+  chrome.runtime.onInstalled.addListener(async (details) => {
+    const settings = await getSettings();
+    const locale = settings.locale === 'auto' ? detectLocale() : settings.locale;
+    setLocale(locale);
+
+    chrome.contextMenus.create({
+      id: 'fixit-settings',
+      title: t('contextMenu.settings'),
+      contexts: ['action'],
+    });
+
+    if (details.reason === 'install' && settings.autoOpenPlayground) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('playground.html') });
+    }
+  });
+
+  chrome.contextMenus.onClicked.addListener((info) => {
+    if (info.menuItemId === 'fixit-settings') {
+      chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
+    }
+  });
+
   // D1: action.onClicked toggles annotation mode AND opens side panel
   chrome.action.onClicked.addListener(async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -34,6 +60,8 @@ export default defineBackground(() => {
       type: MessageType.TOGGLE_ANNOTATION,
       payload: { active: nextState },
     });
+
+    setIconActive(tab.id, nextState);
 
     chrome.sidePanel.open({ tabId: tab.id });
   });
@@ -106,6 +134,8 @@ export default defineBackground(() => {
 
   // Tab lifecycle: notify side panel on tab switch or navigation
   chrome.tabs.onActivated.addListener(({ tabId }) => {
+    const isActive = activeTabs.get(tabId) ?? false;
+    setIconActive(tabId, isActive);
     notifySidePanel(tabId);
   });
 

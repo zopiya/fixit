@@ -11,7 +11,7 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<button data-testid="submit-btn">Submit</button>';
       const el = document.querySelector('button')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('[data-testid="submit-btn"]');
+      expect(result.selector).toBe('[data-testid=submit-btn]');
       expect(result.confidence).toBe('data-attr');
     });
 
@@ -20,7 +20,7 @@ describe('generateCssSelector', () => {
         '<button data-testid="primary" data-cy="secondary">Click</button>';
       const el = document.querySelector('button')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('[data-testid="primary"]');
+      expect(result.selector).toBe('[data-testid=primary]');
       expect(result.confidence).toBe('data-attr');
     });
 
@@ -28,7 +28,7 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<button data-cy="my-btn">Click</button>';
       const el = document.querySelector('button')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('[data-cy="my-btn"]');
+      expect(result.selector).toBe('[data-cy=my-btn]');
       expect(result.confidence).toBe('data-attr');
     });
 
@@ -36,7 +36,7 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<button data-qa="my-btn">Click</button>';
       const el = document.querySelector('button')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('[data-qa="my-btn"]');
+      expect(result.selector).toBe('[data-qa=my-btn]');
       expect(result.confidence).toBe('data-attr');
     });
   });
@@ -81,7 +81,18 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<button aria-label="Close dialog">×</button>';
       const el = document.querySelector('button')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('button[aria-label="Close dialog"]');
+      expect(result.selector).toBe('button[aria-label=Close\\ dialog]');
+      expect(result.confidence).toBe('aria');
+    });
+  });
+
+  describe('priority 3b: role', () => {
+    it('should use role attribute for elements with role', () => {
+      const el = document.createElement('div');
+      el.setAttribute('role', 'dialog');
+      document.body.appendChild(el);
+      const result = generateCssSelector(el);
+      expect(result.selector).toBe('[role=dialog]');
       expect(result.confidence).toBe('aria');
     });
   });
@@ -91,7 +102,7 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<input name="email" />';
       const el = document.querySelector('input')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('input[name="email"]');
+      expect(result.selector).toBe('input[name=email]');
       expect(result.confidence).toBe('name');
     });
 
@@ -100,7 +111,7 @@ describe('generateCssSelector', () => {
         '<select name="country"><option>US</option></select>';
       const el = document.querySelector('select')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('select[name="country"]');
+      expect(result.selector).toBe('select[name=country]');
       expect(result.confidence).toBe('name');
     });
 
@@ -108,7 +119,7 @@ describe('generateCssSelector', () => {
       document.body.innerHTML = '<textarea name="bio"></textarea>';
       const el = document.querySelector('textarea')!;
       const result = generateCssSelector(el);
-      expect(result.selector).toBe('textarea[name="bio"]');
+      expect(result.selector).toBe('textarea[name=bio]');
       expect(result.confidence).toBe('name');
     });
   });
@@ -166,10 +177,10 @@ describe('generateCssSelector', () => {
       const el = document.querySelector('span')!;
       const result = generateCssSelector(el);
       expect(result.confidence).toBe('structural');
-      expect(result.selector).toContain(':nth-child');
+      expect(result.selector).toContain(':nth-of-type');
     });
 
-    it('builds nth-child chain for deeply nested elements', () => {
+    it('builds nth-of-type chain for deeply nested elements', () => {
       document.body.innerHTML = `
         <div>
           <div>
@@ -182,8 +193,8 @@ describe('generateCssSelector', () => {
       const el = document.querySelector('span')!;
       const result = generateCssSelector(el);
       expect(result.confidence).toBe('structural');
-      // Should have multiple levels of :nth-child
-      const nthCount = (result.selector.match(/:nth-child/g) || []).length;
+      // Should have multiple levels of :nth-of-type
+      const nthCount = (result.selector.match(/:nth-of-type/g) || []).length;
       expect(nthCount).toBeGreaterThanOrEqual(2);
     });
   });
@@ -239,6 +250,53 @@ describe('generateCssSelector', () => {
       const result = generateCssSelector(el);
       expect(result.confidence).toBe('structural');
       expect(result.selector).toBeTruthy();
+    });
+
+    it('should escape special characters in attribute values', () => {
+      const el = document.createElement('div');
+      el.setAttribute('data-testid', 'button"with"quotes');
+      document.body.appendChild(el);
+      const result = generateCssSelector(el);
+      expect(result.selector).toContain('button\\"with\\"quotes');
+      expect(result.confidence).toBe('data-attr');
+    });
+  });
+
+  describe('structural selector edge cases', () => {
+    it('builds correct selector with mixed-tag siblings', () => {
+      document.body.innerHTML = `
+        <div>
+          <span>first</span>
+          <p>middle</p>
+          <span>target</span>
+        </div>
+      `;
+      const spans = document.querySelectorAll('span');
+      const result = generateCssSelector(spans[1]);
+      expect(result.confidence).toBe('structural');
+      // Second span should be nth-of-type(2), not nth-of-type(1)
+      expect(result.selector).toContain('span:nth-of-type(2)');
+    });
+
+    it('builds structural selector for deeply nested element with no attributes', () => {
+      document.body.innerHTML = `
+        <div>
+          <div>
+            <div>
+              <div>
+                <span>deep leaf</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const span = document.querySelector('span')!;
+      const result = generateCssSelector(span);
+      expect(result.confidence).toBe('structural');
+      expect(result.selector).toBeTruthy();
+      // Should have multiple levels of :nth-of-type
+      const nthCount = (result.selector.match(/:nth-of-type/g) || []).length;
+      expect(nthCount).toBeGreaterThanOrEqual(3);
     });
   });
 });

@@ -63,6 +63,10 @@ describe('normalizeUrl', () => {
   it('should handle URLs with port', () => {
     expect(normalizeUrl('http://localhost:5173/')).toBe('http://localhost:5173/');
   });
+
+  it('should return original string on invalid URL', () => {
+    expect(normalizeUrl('not-a-url')).toBe('not-a-url');
+  });
 });
 
 describe('getStorageKey', () => {

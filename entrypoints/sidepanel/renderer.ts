@@ -1,33 +1,20 @@
 import type { FixItAnnotation } from '../../src/shared/types';
+import { circledNumber } from '../../src/shared/utils';
+import { t } from '../../src/shared/i18n';
 
-const CIRCLED_NUMBERS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
-                         '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
-
-function circledNumber(n: number): string {
-  return CIRCLED_NUMBERS[n - 1] ?? `(${n})`;
-}
-
-const CONFIDENCE_COLORS: Record<string, string> = {
-  'data-attr': '#22c55e',
-  'id': '#22c55e',
-  'aria': '#22c55e',
-  'name': '#22c55e',
-  'semantic-class': '#eab308',
-  'structural': '#ef4444',
-};
-
-const CONFIDENCE_LABELS: Record<string, string> = {
-  'data-attr': 'data-attr',
-  'id': 'id',
-  'aria': 'aria',
-  'name': 'name',
-  'semantic-class': 'class',
-  'structural': 'structural',
+const CONFIDENCE_LEVEL: Record<string, string> = {
+  'data-attr': 'high',
+  'id': 'high',
+  'aria': 'high',
+  'name': 'high',
+  'semantic-class': 'mid',
+  'structural': 'low',
 };
 
 export class AnnotationRenderer {
   private container: HTMLElement;
   onHighlight: ((annotation: FixItAnnotation) => void) | null = null;
+  onDelete: ((annotation: FixItAnnotation) => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -38,8 +25,9 @@ export class AnnotationRenderer {
 
     if (annotations.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'No annotations yet. Activate FixIt and click an element to annotate.';
+      empty.className = 'flex flex-col items-center justify-center h-full text-slate-400 text-sm text-center p-10 gap-2';
+      empty.dataset.testid = 'empty-state';
+      empty.innerHTML = `<div class="text-3xl opacity-40 mb-2">📌</div><div>${t('sidepanel.empty')}</div>`;
       this.container.appendChild(empty);
       return;
     }
@@ -56,45 +44,63 @@ export class AnnotationRenderer {
 
   destroy(): void {
     this.onHighlight = null;
+    this.onDelete = null;
     this.container.innerHTML = '';
   }
 
   private createItem(ann: FixItAnnotation): HTMLElement {
     const item = document.createElement('div');
-    item.className = 'annotation-item';
+    item.className = 'px-3 py-3 rounded-xl cursor-pointer transition-all hover:bg-slate-50 group';
+    item.dataset.testid = 'annotation-item';
 
-    const header = document.createElement('div');
-    header.className = 'annotation-header';
+    const row = document.createElement('div');
+    row.className = 'flex items-start gap-3';
 
-    const seq = document.createElement('span');
-    seq.className = 'annotation-sequence';
+    const seq = document.createElement('div');
+    seq.className = 'w-7 h-7 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5';
     seq.textContent = circledNumber(ann.sequenceIndex);
 
-    const comment = document.createElement('span');
-    comment.className = 'annotation-comment';
+    const body = document.createElement('div');
+    body.className = 'flex-1 min-w-0';
+
+    const comment = document.createElement('div');
+    comment.className = 'text-sm font-medium text-slate-800 leading-snug';
     comment.textContent = ann.userComment || 'Untitled';
 
-    const badge = document.createElement('span');
-    badge.className = 'confidence-badge';
-    badge.dataset.confidence = ann.cssSelectorConfidence;
-    badge.textContent = CONFIDENCE_LABELS[ann.cssSelectorConfidence] ?? ann.cssSelectorConfidence;
-    badge.style.backgroundColor = CONFIDENCE_COLORS[ann.cssSelectorConfidence] ?? '#6b7280';
+    const meta = document.createElement('div');
+    meta.className = 'flex items-center gap-2 mt-1.5';
 
-    header.appendChild(seq);
-    header.appendChild(comment);
-    header.appendChild(badge);
+    const dot = document.createElement('div');
+    dot.className = 'w-1.5 h-1.5 rounded-full shrink-0';
+    dot.dataset.testid = 'confidence-dot';
+    const level = CONFIDENCE_LEVEL[ann.cssSelectorConfidence] ?? 'low';
+    dot.dataset.level = level;
+    if (level === 'high') dot.classList.add('bg-emerald-500');
+    else if (level === 'mid') dot.classList.add('bg-yellow-500');
+    else dot.classList.add('bg-red-500');
 
-    const selector = document.createElement('div');
-    selector.className = 'annotation-selector';
+    const selector = document.createElement('span');
+    selector.className = 'text-xs text-slate-400 font-mono truncate max-w-48';
     selector.textContent = ann.cssSelector;
 
-    item.appendChild(header);
-    item.appendChild(selector);
-
-    item.addEventListener('click', () => {
-      this.onHighlight?.(ann);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'w-6 h-6 rounded-full border-none bg-transparent text-slate-300 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shrink-0 hover:bg-red-50 hover:text-red-500 self-center';
+    deleteBtn.textContent = '×';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onDelete?.(ann);
     });
 
+    meta.appendChild(dot);
+    meta.appendChild(selector);
+    body.appendChild(comment);
+    body.appendChild(meta);
+    row.appendChild(seq);
+    row.appendChild(body);
+    row.appendChild(deleteBtn);
+    item.appendChild(row);
+
+    item.addEventListener('click', () => this.onHighlight?.(ann));
     return item;
   }
 }

@@ -1,4 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock settings module
+vi.mock('../../src/shared/settings', () => ({
+  getSettings: vi.fn(async () => ({
+    highlightColor: '#3B82F6',
+    highlightBorderWidth: 2,
+    bubbleBorderRadius: 12,
+    snapshotMaxLength: 500,
+    highlightFlashMs: 2000,
+    autoOpenPlayground: true,
+    locale: 'auto',
+    customHotkey: '',
+    copyContext: {
+      comment: true,
+      cssSelector: true,
+      xpath: true,
+      confidence: true,
+      htmlSnapshot: false,
+    },
+  })),
+}));
+
 import { AnnotationOverlay } from '../../src/content/overlay';
 
 describe('AnnotationOverlay', () => {
@@ -28,8 +50,7 @@ describe('AnnotationOverlay', () => {
   }
 
   function getShadowRoot(): ShadowRoot | null {
-    const host = document.documentElement.querySelector('fixit-overlay') as (HTMLElement & Record<string, unknown>) | null;
-    return (host?.__fixitShadow as ShadowRoot) ?? null;
+    return overlay.getShadowRoot();
   }
 
   describe('activate()', () => {

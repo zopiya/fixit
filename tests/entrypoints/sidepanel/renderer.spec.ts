@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FixItAnnotation } from '../../../src/shared/types';
+import { setLocale } from '../../../src/shared/i18n';
 import { AnnotationRenderer } from '../../../entrypoints/sidepanel/renderer';
 
 function makeAnnotation(overrides: Partial<FixItAnnotation> = {}): FixItAnnotation {
@@ -23,6 +24,7 @@ let container: HTMLElement;
 beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
+  setLocale('en');
 });
 
 describe('AnnotationRenderer', () => {
@@ -35,7 +37,7 @@ describe('AnnotationRenderer', () => {
       ];
       renderer.render(annotations);
 
-      const items = container.querySelectorAll('.annotation-item');
+      const items = container.querySelectorAll('[data-testid="annotation-item"]');
       expect(items).toHaveLength(2);
     });
 
@@ -53,25 +55,25 @@ describe('AnnotationRenderer', () => {
       expect(container.textContent).toContain('Make it bigger');
     });
 
-    it('shows confidence badge with correct color', () => {
+    it('shows confidence dot with correct level', () => {
       const renderer = new AnnotationRenderer(container);
 
       renderer.render([makeAnnotation({ cssSelectorConfidence: 'data-attr' })]);
-      let badge = container.querySelector('.confidence-badge') as HTMLElement;
-      expect(badge).toBeTruthy();
-      expect(badge.dataset.confidence).toBe('data-attr');
+      let dot = container.querySelector('[data-testid="confidence-dot"]') as HTMLElement;
+      expect(dot).toBeTruthy();
+      expect(dot.dataset.level).toBe('high');
 
       renderer.clear();
       renderer.render([makeAnnotation({ cssSelectorConfidence: 'structural' })]);
-      badge = container.querySelector('.confidence-badge') as HTMLElement;
-      expect(badge.dataset.confidence).toBe('structural');
+      dot = container.querySelector('[data-testid="confidence-dot"]') as HTMLElement;
+      expect(dot.dataset.level).toBe('low');
     });
 
     it('shows empty state when annotations array is empty', () => {
       const renderer = new AnnotationRenderer(container);
       renderer.render([]);
 
-      expect(container.querySelector('.empty-state')).toBeTruthy();
+      expect(container.querySelector('[data-testid="empty-state"]')).toBeTruthy();
       expect(container.textContent).toContain('No annotations');
     });
   });
@@ -80,10 +82,10 @@ describe('AnnotationRenderer', () => {
     it('removes all rendered items', () => {
       const renderer = new AnnotationRenderer(container);
       renderer.render([makeAnnotation()]);
-      expect(container.querySelectorAll('.annotation-item')).toHaveLength(1);
+      expect(container.querySelectorAll('[data-testid="annotation-item"]')).toHaveLength(1);
 
       renderer.clear();
-      expect(container.querySelectorAll('.annotation-item')).toHaveLength(0);
+      expect(container.querySelectorAll('[data-testid="annotation-item"]')).toHaveLength(0);
     });
   });
 
@@ -106,10 +108,26 @@ describe('AnnotationRenderer', () => {
       const ann = makeAnnotation({ id: 'click-me' });
       renderer.render([ann]);
 
-      const item = container.querySelector('.annotation-item') as HTMLElement;
+      const item = container.querySelector('[data-testid="annotation-item"]') as HTMLElement;
       item.click();
 
       expect(onHighlight).toHaveBeenCalledWith(ann);
+    });
+  });
+
+  describe('high sequence index', () => {
+    it('renders fallback for sequenceIndex > 20', () => {
+      const renderer = new AnnotationRenderer(container);
+      renderer.render([makeAnnotation({ sequenceIndex: 21 })]);
+
+      expect(container.textContent).toContain('(21)');
+    });
+
+    it('renders circled number for sequenceIndex <= 20', () => {
+      const renderer = new AnnotationRenderer(container);
+      renderer.render([makeAnnotation({ sequenceIndex: 20 })]);
+
+      expect(container.textContent).toContain('⑳');
     });
   });
 });

@@ -29,6 +29,7 @@ export enum MessageType {
   GET_ANNOTATIONS = 'GET_ANNOTATIONS',
   CLEAR_ALL = 'CLEAR_ALL',
   TOGGLE_ANNOTATION = 'TOGGLE_ANNOTATION',
+  HIGHLIGHT = 'HIGHLIGHT',
 }
 
 export interface Message<T = unknown> {

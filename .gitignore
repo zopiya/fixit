@@ -1,5 +1,6 @@
 # Synapse
 .synapse/
+.playwright-mcp/
 
 # Dependencies
 node_modules/
@@ -34,3 +35,4 @@ coverage/
 # Chrome extension
 *.crx
 *.pem
+

@@ -1,4 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock settings module
+vi.mock('../../src/shared/settings', () => ({
+  getSettings: vi.fn(async () => ({
+    highlightColor: '#3B82F6',
+    highlightBorderWidth: 2,
+    bubbleBorderRadius: 12,
+    snapshotMaxLength: 500,
+    highlightFlashMs: 2000,
+    autoOpenPlayground: true,
+    locale: 'auto',
+  })),
+}));
+
 import { Highlighter } from '../../src/content/highlighter';
 
 describe('Highlighter', () => {

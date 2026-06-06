@@ -1,182 +1,181 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock chrome API — hoisted so it's available before module import
-const { messageListeners, chromeMock } = vi.hoisted(() => {
-  const messageListeners: Array<(msg: unknown) => void> = [];
-  const chromeMock = {
-    runtime: {
-      onMessage: {
-        addListener: vi.fn((fn: (msg: unknown) => void) => {
-          messageListeners.push(fn);
-        }),
-      },
-    },
-  };
-  return { messageListeners, chromeMock };
+// Mock chrome API
+vi.stubGlobal('chrome', {
+  runtime: {
+    sendMessage: vi.fn(),
+  },
+  tabs: {
+    query: vi.fn(),
+  },
+  sidePanel: {
+    open: vi.fn(),
+  },
 });
 
-vi.stubGlobal('chrome', chromeMock);
+// Mock crypto.randomUUID
+vi.stubGlobal('crypto', {
+  randomUUID: vi.fn(() => 'test-uuid'),
+});
 
-import { completeStep, showCompletion, completedSteps, setupBugDetection } from '../../../entrypoints/playground/main';
+// Mock locator modules
+vi.mock('../../src/content/locator/css-selector', () => ({
+  generateCssSelector: vi.fn(() => ({ selector: '#test', confidence: 'id' })),
+}));
+
+vi.mock('../../src/content/locator/xpath', () => ({
+  generateXPath: vi.fn(() => ({ xpath: 'id("test")' })),
+}));
+
+// Mock i18n
+vi.mock('../../src/shared/i18n', () => ({
+  t: (key: string) => {
+    const map: Record<string, string> = {
+      'playground.welcome': 'Welcome to FixIt Playground',
+      'playground.intro': 'Master FixIt in three simple tasks',
+      'playground.start': 'Start',
+      'playground.task1.desc': 'Click the misaligned button',
+      'playground.task1.hint': 'Click the red button',
+      'playground.task2.desc': 'Find the wrong color text',
+      'playground.task2.hint': 'The lime-green text is hard to read',
+      'playground.task3.desc': 'Annotate the broken layout',
+      'playground.task3.hint': 'One card is misaligned',
+      'playground.complete.title': 'Congratulations!',
+      'playground.complete.desc': "You've mastered FixIt",
+      'playground.complete.hint': 'Now use FixIt on any page',
+      'playground.restart': 'Start Over',
+      'playground.btn.submit': 'Submit Order',
+      'playground.wrong.text': 'This text color is wrong',
+      'playground.activateBtn': 'Click to annotate',
+      'playground.workOrder': 'Work Order Preview',
+      'playground.noAnnotations': 'No annotations yet',
+      'bubble.placeholder': 'Describe the issue…',
+      'bubble.add': 'Add',
+      'sidepanel.copy': 'Copy',
+      'sidepanel.copied': 'Copied!',
+    };
+    return map[key] ?? key;
+  },
+  setLocale: vi.fn(),
+  detectLocaleAsync: vi.fn(async () => 'en'),
+}));
+
+// Mock exporter
+vi.mock('../../../entrypoints/sidepanel/exporter', () => ({
+  exportToMarkdown: vi.fn(async () => '# Work Order'),
+}));
+
+import { renderStep } from '../../../entrypoints/playground/main';
 
 beforeEach(() => {
-  completedSteps.clear();
-  messageListeners.length = 0;
   vi.clearAllMocks();
-
-  document.body.innerHTML = `
-    <div class="task-item active" data-task="1">
-      <div class="task-number">1</div>
-      <div><div class="task-label">Task 1</div></div>
-    </div>
-    <div class="task-item" data-task="2">
-      <div class="task-number">2</div>
-      <div><div class="task-label">Task 2</div></div>
-    </div>
-    <div class="task-item" data-task="3">
-      <div class="task-number">3</div>
-      <div><div class="task-label">Task 3</div></div>
-    </div>
-    <div class="completion-overlay" id="completion-overlay">
-      <div class="fireworks" id="fireworks"></div>
-    </div>
-  `;
-
-  setupBugDetection();
+  document.body.innerHTML = '<div id="step-container"></div>';
 });
 
-describe('playground step tracking', () => {
-  it('marks a step as completed', () => {
-    completeStep(1);
-    const item = document.querySelector('.task-item[data-task="1"]');
-    expect(item?.classList.contains('completed')).toBe(true);
-  });
-
-  it('activates the next step after completing current', () => {
-    completeStep(1);
-    const next = document.querySelector('.task-item[data-task="2"]');
-    expect(next?.classList.contains('active')).toBe(true);
-  });
-
-  it('does not double-complete a step', () => {
-    completeStep(1);
-    completeStep(1);
-    expect(completedSteps.size).toBe(1);
-  });
-
-  it('removes active class when step is completed', () => {
-    completeStep(1);
-    const item = document.querySelector('.task-item[data-task="1"]');
-    expect(item?.classList.contains('active')).toBe(false);
-  });
-
-  it('keeps step 3 inactive until step 2 is done', () => {
-    completeStep(1);
-    const step3 = document.querySelector('.task-item[data-task="3"]');
-    expect(step3?.classList.contains('active')).toBe(false);
-  });
-});
-
-describe('playground completion', () => {
-  it('shows completion overlay after all 3 steps', () => {
-    completeStep(1);
-    completeStep(2);
-    completeStep(3);
-
-    const overlay = document.getElementById('completion-overlay');
-    expect(overlay?.classList.contains('visible')).toBe(true);
-  });
-
-  it('does not show overlay before all steps are done', () => {
-    completeStep(1);
-    completeStep(2);
-
-    const overlay = document.getElementById('completion-overlay');
-    expect(overlay?.classList.contains('visible')).toBe(false);
-  });
-
-  it('creates firework particles on completion', () => {
-    showCompletion();
-
-    const fireworks = document.getElementById('fireworks');
-    const particles = fireworks?.querySelectorAll('.particle');
-    expect(particles?.length).toBeGreaterThan(0);
-  });
-
-  it('creates burst groups for staggered animation', () => {
-    showCompletion();
-
-    const fireworks = document.getElementById('fireworks');
-    const groups = fireworks?.querySelectorAll('.burst-group');
-    expect(groups?.length).toBe(5);
-  });
-});
-
-describe('playground firework animation', () => {
-  it('particle elements have custom CSS variables for direction', () => {
-    showCompletion();
-
-    const fireworks = document.getElementById('fireworks');
-    const particle = fireworks?.querySelector('.particle') as HTMLElement;
-    expect(particle?.style.getPropertyValue('--tx')).toBeTruthy();
-    expect(particle?.style.getPropertyValue('--ty')).toBeTruthy();
-  });
-
-  it('particles have different background colors', () => {
-    showCompletion();
-
-    const fireworks = document.getElementById('fireworks');
-    const particles = fireworks?.querySelectorAll('.particle');
-    const colors = new Set<string>();
-    particles?.forEach((p) => {
-      colors.add((p as HTMLElement).style.background);
+describe('playground wizard', () => {
+  describe('renderStep("welcome")', () => {
+    it('renders welcome screen with start button', () => {
+      renderStep('welcome');
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('#start-btn')).toBeTruthy();
+      expect(container.textContent).toContain('Welcome to FixIt Playground');
     });
-    expect(colors.size).toBeGreaterThan(1);
+
+    it('navigates to bug1 when start is clicked', () => {
+      renderStep('welcome');
+      document.getElementById('start-btn')!.click();
+      const container = document.getElementById('step-container')!;
+      expect(container.textContent).toContain('Click the misaligned button');
+    });
+  });
+
+  describe('renderStep("bug1")', () => {
+    it('renders bug1 step with misaligned button', () => {
+      renderStep('bug1');
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('[data-bug="misaligned-btn"]')).toBeTruthy();
+      expect(container.textContent).toContain('Submit Order');
+    });
+
+    it('renders back button that goes to welcome', () => {
+      renderStep('bug1');
+      document.getElementById('back-btn')!.click();
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('#start-btn')).toBeTruthy();
+    });
+  });
+
+  describe('renderStep("bug2")', () => {
+    it('renders bug2 step with wrong color text', () => {
+      renderStep('bug2');
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('[data-bug="wrong-color-text"]')).toBeTruthy();
+    });
+
+    it('renders back button that goes to bug1', () => {
+      renderStep('bug2');
+      document.getElementById('back-btn')!.click();
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('[data-bug="misaligned-btn"]')).toBeTruthy();
+    });
+  });
+
+  describe('renderStep("bug3")', () => {
+    it('renders bug3 step with broken layout cards', () => {
+      renderStep('bug3');
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('[data-bug="broken-layout"]')).toBeTruthy();
+      expect(container.querySelector('[data-bug="card-ok"]')).toBeTruthy();
+    });
+
+    it('renders back button that goes to bug2', () => {
+      renderStep('bug3');
+      document.getElementById('back-btn')!.click();
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('[data-bug="wrong-color-text"]')).toBeTruthy();
+    });
+  });
+
+  describe('renderStep("done")', () => {
+    it('renders congratulations screen', () => {
+      renderStep('done');
+      const container = document.getElementById('step-container')!;
+      expect(container.textContent).toContain('Congratulations!');
+      expect(container.querySelector('#restart-btn')).toBeTruthy();
+    });
+
+    it('renders work order preview', () => {
+      renderStep('done');
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('#work-order-content')).toBeTruthy();
+      expect(container.querySelector('#copy-work-order')).toBeTruthy();
+    });
+
+    it('restart button goes back to welcome', () => {
+      renderStep('done');
+      document.getElementById('restart-btn')!.click();
+      const container = document.getElementById('step-container')!;
+      expect(container.querySelector('#start-btn')).toBeTruthy();
+    });
   });
 });
 
-describe('playground chrome message listener', () => {
-  it('registers a message listener for ADD_ANNOTATION', () => {
-    expect(chromeMock.runtime.onMessage.addListener).toHaveBeenCalled();
+describe('fireworks', () => {
+  it('creates burst groups with particles', () => {
+    // Render done first to create the fireworks container
+    renderStep('done');
+    const fireworks = document.getElementById('fireworks-container')!;
+    const groups = fireworks.querySelectorAll('.burst-group');
+    expect(groups.length).toBe(5);
+    const particles = fireworks.querySelectorAll('.particle');
+    expect(particles.length).toBe(70); // 5 groups * 14 particles
   });
 
-  it('completes all steps when ADD_ANNOTATION message is received', () => {
-    for (const listener of messageListeners) {
-      listener({
-        type: 'ADD_ANNOTATION',
-        payload: { userComment: 'Fix this button' },
-      });
-    }
-
-    expect(completedSteps.size).toBe(3);
-  });
-});
-
-describe('playground bug click detection', () => {
-  it('completes step 1 when misaligned button is clicked', () => {
-    const btn = document.createElement('button');
-    btn.setAttribute('data-bug', 'misaligned-btn');
-    document.body.appendChild(btn);
-
-    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(completedSteps.has(1)).toBe(true);
-  });
-
-  it('completes step 2 when wrong color text is clicked', () => {
-    const text = document.createElement('p');
-    text.setAttribute('data-bug', 'wrong-color-text');
-    document.body.appendChild(text);
-
-    text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(completedSteps.has(2)).toBe(true);
-  });
-
-  it('completes step 3 when broken layout card is clicked', () => {
-    const card = document.createElement('div');
-    card.setAttribute('data-bug', 'broken-layout');
-    document.body.appendChild(card);
-
-    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(completedSteps.has(3)).toBe(true);
+  it('particles have CSS custom properties for direction', () => {
+    renderStep('done');
+    const fireworks = document.getElementById('fireworks-container')!;
+    const particle = fireworks.querySelector('.particle') as HTMLElement;
+    expect(particle.style.getPropertyValue('--tx')).toBeTruthy();
+    expect(particle.style.getPropertyValue('--ty')).toBeTruthy();
   });
 });

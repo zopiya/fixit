@@ -1,3 +1,10 @@
+function escapeXPathValue(value: string): string {
+  if (value.includes("'")) {
+    return `concat('${value.replace(/'/g, "',\"'\",'")}')`;
+  }
+  return `'${value}'`;
+}
+
 function findStableAncestor(el: Element): Element | null {
   let current = el.parentElement;
   while (current && current !== document.documentElement) {
@@ -14,14 +21,14 @@ function findStableAncestor(el: Element): Element | null {
 
 function getAnchorXPathExpr(anchor: Element): string {
   if (anchor.id) {
-    return `id('${anchor.id}')`;
+    return `id(${escapeXPathValue(anchor.id)})`;
   }
   // Use first data-* attribute found
   const dataAttr = Array.from(anchor.attributes).find((a) =>
     a.name.startsWith('data-'),
   );
   if (dataAttr) {
-    return `//*[@${dataAttr.name}='${dataAttr.value}']`;
+    return `//*[@${dataAttr.name}=${escapeXPathValue(dataAttr.value)}]`;
   }
   return '';
 }

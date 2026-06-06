@@ -87,6 +87,7 @@ import {
   getStorageKey,
   getAnnotations,
   addAnnotation,
+  deleteAnnotation,
 } from '../../src/shared/storage';
 import { generateCssSelector } from '../../src/content/locator/css-selector';
 import { generateXPath } from '../../src/content/locator/xpath';
@@ -131,7 +132,7 @@ describe('integration: locator → annotation creation', () => {
     const cssResult = generateCssSelector(el);
     const xpathResult = generateXPath(el);
 
-    expect(cssResult.selector).toBe('[data-testid="login-btn"]');
+    expect(cssResult.selector).toBe('[data-testid=login-btn]');
     expect(cssResult.confidence).toBe('data-attr');
     expect(xpathResult.xpath).toBeTruthy();
     expect(xpathResult.isRelative).toBe(false); // no stable ancestor with id/data-*
@@ -160,7 +161,7 @@ describe('integration: locator → annotation creation', () => {
 
     const cssResult = generateCssSelector(span);
     expect(cssResult.confidence).toBe('structural');
-    expect(cssResult.selector).toContain(':nth-child');
+    expect(cssResult.selector).toContain(':nth-of-type');
   });
 });
 
@@ -215,7 +216,7 @@ describe('integration: annotation full lifecycle', () => {
     // 3. Retrieve from storage
     const annotations = await getAnnotations(annotation.url);
     expect(annotations).toHaveLength(1);
-    expect(annotations[0].cssSelector).toBe('[data-testid="action-btn"]');
+    expect(annotations[0].cssSelector).toBe('[data-testid=action-btn]');
     expect(annotations[0].cssSelectorConfidence).toBe('data-attr');
     expect(annotations[0].userComment).toBe('Add hover effect');
   });
@@ -241,7 +242,7 @@ describe('integration: side panel renderer + exporter', () => {
     document.body.appendChild(container);
   });
 
-  it('renders annotations and exports valid markdown', () => {
+  it('renders annotations and exports valid markdown', async () => {
     const annotations = [
       makeAnnotation({
         id: 'a1',
@@ -264,7 +265,7 @@ describe('integration: side panel renderer + exporter', () => {
     const renderer = new AnnotationRenderer(container);
     renderer.render(annotations);
 
-    const items = container.querySelectorAll('.annotation-item');
+    const items = container.querySelectorAll('[data-testid="annotation-item"]');
     expect(items).toHaveLength(2);
     expect(container.textContent).toContain('①');
     expect(container.textContent).toContain('②');
@@ -272,7 +273,7 @@ describe('integration: side panel renderer + exporter', () => {
     expect(container.textContent).toContain('Align header');
 
     // Export to markdown
-    const md = exportToMarkdown(annotations, 'My App', 'http://localhost:3000/app');
+    const md = await exportToMarkdown(annotations, 'My App', 'http://localhost:3000/app');
 
     expect(md).toContain('# FixIt Work Order — My App');
     expect(md).toContain('http://localhost:3000/app');
@@ -280,8 +281,8 @@ describe('integration: side panel renderer + exporter', () => {
     expect(md).toContain('## ② Align header');
     expect(md).toContain('[data-testid="submit"]');
     expect(md).toContain('#header');
-    expect(md).toContain('🟢 data-attr');
-    expect(md).toContain('🟢 id');
+    expect(md).toContain('🟢 High');
+    expect(md).toContain('**Requirement**');
   });
 
   it('renderer click triggers highlight callback with correct annotation', () => {
@@ -292,7 +293,7 @@ describe('integration: side panel renderer + exporter', () => {
 
     renderer.render(annotations);
 
-    const item = container.querySelector('.annotation-item') as HTMLElement;
+    const item = container.querySelector('[data-testid="annotation-item"]') as HTMLElement;
     item.click();
 
     expect(onHighlight).toHaveBeenCalledWith(
@@ -304,7 +305,7 @@ describe('integration: side panel renderer + exporter', () => {
     const renderer = new AnnotationRenderer(container);
     renderer.render([]);
 
-    expect(container.querySelector('.empty-state')).toBeTruthy();
+    expect(container.querySelector('[data-testid="empty-state"]')).toBeTruthy();
     expect(container.textContent).toContain('No annotations');
   });
 });
@@ -362,5 +363,67 @@ describe('integration: confidence levels', () => {
 
     // bare span → structural
     expect(generateCssSelector(els[5]).confidence).toBe('structural');
+  });
+});
+
+describe('integration: normalizeUrl edge cases', () => {
+  it('strips query parameters and hash', () => {
+    expect(normalizeUrl('http://localhost:3000/app?tab=settings#top')).toBe(
+      'http://localhost:3000/app',
+    );
+  });
+
+  it('handles URL with port', () => {
+    expect(normalizeUrl('http://localhost:3000/path')).toBe('http://localhost:3000/path');
+  });
+
+  it('handles URL with trailing slash', () => {
+    expect(normalizeUrl('http://example.com/app/')).toBe('http://example.com/app/');
+  });
+
+  it('returns input unchanged for invalid URL', () => {
+    expect(normalizeUrl('not-a-url')).toBe('not-a-url');
+  });
+
+  it('handles HTTPS URLs', () => {
+    expect(normalizeUrl('https://example.com/page?q=1#section')).toBe('https://example.com/page');
+  });
+});
+
+describe('integration: full annotation flow (add → render → delete)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  it('adds annotations, renders them, then deletes one', async () => {
+    const url = 'http://localhost:3000/app';
+
+    // Add two annotations
+    await addAnnotation(url, makeAnnotation({ id: 'ann-1', sequenceIndex: 1, userComment: 'First' }));
+    await addAnnotation(url, makeAnnotation({ id: 'ann-2', sequenceIndex: 2, userComment: 'Second' }));
+
+    // Retrieve and render
+    const annotations = await getAnnotations(url);
+    expect(annotations).toHaveLength(2);
+
+    const renderer = new AnnotationRenderer(container);
+    renderer.render(annotations);
+    expect(container.querySelectorAll('[data-testid="annotation-item"]')).toHaveLength(2);
+    expect(container.textContent).toContain('First');
+    expect(container.textContent).toContain('Second');
+
+    // Delete first annotation and re-render
+    await deleteAnnotation(url, 'ann-1');
+    const afterDelete = await getAnnotations(url);
+    expect(afterDelete).toHaveLength(1);
+    expect(afterDelete[0].id).toBe('ann-2');
+
+    renderer.render(afterDelete);
+    expect(container.querySelectorAll('[data-testid="annotation-item"]')).toHaveLength(1);
+    expect(container.textContent).toContain('Second');
+    expect(container.textContent).not.toContain('First');
   });
 });

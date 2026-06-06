@@ -108,4 +108,14 @@ describe('generateXPath', () => {
       expect(typeof result.xpath).toBe('string');
     });
   });
+
+  describe('special characters', () => {
+    it('should handle single quotes in attribute values', () => {
+      const el = document.createElement('div');
+      el.setAttribute('data-testid', "it's a test");
+      document.body.appendChild(el);
+      const result = generateXPath(el);
+      expect(result.xpath).toBeTruthy();
+    });
+  });
 });

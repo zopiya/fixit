@@ -15,6 +15,20 @@ const chromeMock = {
 vi.stubGlobal('chrome', chromeMock);
 vi.stubGlobal('crypto', { randomUUID: vi.fn(() => 'test-uuid') });
 
+// Mock settings module
+vi.mock('../../src/shared/settings', () => ({
+  getSettings: vi.fn(async () => ({
+    highlightColor: '#3B82F6',
+    highlightBorderWidth: 2,
+    bubbleBorderRadius: 12,
+    snapshotMaxLength: 500,
+    highlightFlashMs: 2000,
+    autoOpenPlayground: true,
+    locale: 'auto',
+    customHotkey: '',
+  })),
+}));
+
 // Mock locator functions
 vi.mock('../../src/content/locator/index', () => ({
   generateCssSelector: vi.fn(() => ({ selector: '#test', confidence: 'id' })),
@@ -40,20 +54,21 @@ const mockAddBadge = vi.fn();
 const mockRemoveBadge = vi.fn();
 const mockMarkDisconnected = vi.fn();
 const mockOverlayDestroy = vi.fn();
+const mockGetShadowRoot = vi.fn();
 let confirmCallback: ((comment: string) => void) | null = null;
 let cancelCallback: (() => void) | null = null;
 
 const mockActivate = vi.fn(() => {
   const host = document.createElement('fixit-overlay');
   const shadow = host.attachShadow({ mode: 'closed' });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (host as any).__fixitShadow = shadow;
   document.documentElement.appendChild(host);
+  mockGetShadowRoot.mockReturnValue(shadow);
 });
 
 const mockDeactivate = vi.fn(() => {
   const host = document.documentElement.querySelector('fixit-overlay');
   if (host) host.remove();
+  mockGetShadowRoot.mockReturnValue(null);
 });
 
 vi.mock('../../src/content/overlay', () => ({
@@ -66,6 +81,7 @@ vi.mock('../../src/content/overlay', () => ({
     removeBadge = mockRemoveBadge;
     markDisconnected = mockMarkDisconnected;
     destroy = mockOverlayDestroy;
+    getShadowRoot = mockGetShadowRoot;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     set onConfirm(fn: any) { confirmCallback = fn; }
     get onConfirm() { return confirmCallback; }
@@ -238,6 +254,32 @@ describe('content script entry', () => {
       }
 
       expect(mockHideBubble).toHaveBeenCalled();
+    });
+  });
+
+  describe('HIGHLIGHT message', () => {
+    it('shows highlight and scrolls to element when HIGHLIGHT is received', () => {
+      sendToggleMessage(true);
+      const el = document.createElement('div');
+      el.scrollIntoView = vi.fn();
+      document.body.appendChild(el);
+
+      for (const listener of messageListeners) {
+        listener({ type: 'HIGHLIGHT', payload: { cssSelector: 'div' } });
+      }
+
+      expect(mockShow).toHaveBeenCalledWith(el);
+      expect(el.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    });
+
+    it('does not throw on invalid selector', () => {
+      sendToggleMessage(true);
+
+      expect(() => {
+        for (const listener of messageListeners) {
+          listener({ type: 'HIGHLIGHT', payload: { cssSelector: '###invalid' } });
+        }
+      }).not.toThrow();
     });
   });
 });

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FixIt Settings</title>
+    <style>
+      @import "tailwindcss";
+
+      .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+      .toggle input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e2e8f0; border-radius: 12px; transition: 0.2s ease; }
+      .toggle-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+      .toggle input:checked + .toggle-slider { background: #3B82F6; }
+      .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+      .toggle input:focus-visible + .toggle-slider { box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
+    <div class="max-w-2xl mx-auto py-12 px-6">
+      <!-- Logo + title -->
+      <div class="flex items-center gap-3 mb-10">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-lg font-bold shadow-lg shadow-blue-500/20">F</div>
+        <div>
+          <div class="text-lg font-bold text-slate-800 tracking-tight">FixIt</div>
+          <div class="text-xs text-slate-400">v1.0.0</div>
+        </div>
+      </div>
+
+      <!-- Two-column grid for sections -->
+      <div class="grid grid-cols-1 gap-5">
+        <!-- General -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 text-sm">⚙️</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="settings.general">常规</div>
+          </div>
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.language">语言</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.language.desc">选择界面语言，或跟随系统自动检测</div>
+            </div>
+            <select id="language-select" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white cursor-pointer focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all">
+              <option value="auto" data-i18n="settings.language.auto">跟随系统</option>
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.hotkey">快捷键</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.hotkey.desc">自定义激活快捷键（留空使用默认 Alt+Shift+F）</div>
+              <div class="text-xs text-slate-400 mt-1">推荐: Alt+Shift+F (无冲突)</div>
+            </div>
+            <input type="text" id="custom-hotkey" placeholder="Alt+Shift+F" class="w-36 py-1.5 px-2.5 border border-slate-200 rounded-lg text-sm text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all" />
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 text-sm">🎨</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="settings.appearance">外观</div>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.highlightColor">高亮颜色</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.highlightColor.desc">鼠标悬停时的高亮边框颜色</div>
+            </div>
+            <input type="color" id="highlight-color" value="#3B82F6" class="w-9 h-7 border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 transition-all" />
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.borderWidth">边框宽度</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.borderWidth.desc">高亮边框的粗细（像素）</div>
+            </div>
+            <select id="border-width" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white cursor-pointer focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all">
+              <option value="1">1px</option>
+              <option value="2" selected>2px</option>
+              <option value="3">3px</option>
+              <option value="4">4px</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Behavior -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 text-sm">🖱️</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="settings.behavior">行为</div>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.snapshotLength">快照长度</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.snapshotLength.desc">HTML 快照的最大字符数</div>
+            </div>
+            <select id="snapshot-length" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white cursor-pointer focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all">
+              <option value="200">200</option>
+              <option value="500" selected>500</option>
+              <option value="1000">1000</option>
+              <option value="2000">2000</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.flashDuration">高亮闪烁时长</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.flashDuration.desc">点击定位后高亮显示的时间（毫秒）</div>
+            </div>
+            <select id="flash-duration" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white cursor-pointer focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all">
+              <option value="1000">1s</option>
+              <option value="2000" selected>2s</option>
+              <option value="3000">3s</option>
+              <option value="5000">5s</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.autoOpenPlayground">自动打开引导</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.autoOpenPlayground.desc">首次安装时自动打开引导页面</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="auto-playground" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Copy Context -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 text-sm">📋</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider" data-i18n="settings.copyContext">复制内容</div>
+          </div>
+          <p class="text-xs text-slate-400 mb-5 ml-9" data-i18n="settings.copyContext.desc">配置复制工单时包含哪些信息</p>
+
+          <label class="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors">
+            <input type="checkbox" id="ctx-comment" checked class="w-4 h-4 rounded border-slate-300 text-blue-500" />
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.ctx.comment">用户评论</div>
+              <div class="text-xs text-slate-400">User comment text</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 py-2.5 border-t border-slate-50 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors">
+            <input type="checkbox" id="ctx-css" checked class="w-4 h-4 rounded border-slate-300 text-blue-500" />
+            <div>
+              <div class="text-sm font-medium">CSS Selector</div>
+              <div class="text-xs text-slate-400" data-i18n="settings.ctx.css.desc">元素定位选择器</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 py-2.5 border-t border-slate-50 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors">
+            <input type="checkbox" id="ctx-xpath" checked class="w-4 h-4 rounded border-slate-300 text-blue-500" />
+            <div>
+              <div class="text-sm font-medium">XPath</div>
+              <div class="text-xs text-slate-400" data-i18n="settings.ctx.xpath.desc">XPath 定位路径</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 py-2.5 border-t border-slate-50 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors">
+            <input type="checkbox" id="ctx-confidence" checked class="w-4 h-4 rounded border-slate-300 text-blue-500" />
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.ctx.confidence">可靠度</div>
+              <div class="text-xs text-slate-400" data-i18n="settings.ctx.confidence.desc">定位器的可靠程度</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 py-2.5 border-t border-slate-50 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors">
+            <input type="checkbox" id="ctx-snapshot" class="w-4 h-4 rounded border-slate-300 text-blue-500" />
+            <div>
+              <div class="text-sm font-medium" data-i18n="settings.ctx.snapshot">HTML 快照</div>
+              <div class="text-xs text-slate-400" data-i18n="settings.ctx.snapshot.desc">元素的 HTML 片段</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="text-center mt-10">
+        <button id="reset-btn" class="text-sm text-slate-400 hover:text-slate-600 transition-colors px-4 py-2 rounded-lg hover:bg-slate-100" data-i18n="settings.reset">恢复默认设置</button>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

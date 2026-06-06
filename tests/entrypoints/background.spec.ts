@@ -8,6 +8,8 @@ const messageListeners: Array<(msg: unknown, sender: unknown, sendResponse: (res
 const tabActivatedListeners: Array<(info: { tabId: number }) => void> = [];
 const tabUpdatedListeners: Array<(tabId: number, changeInfo: { status?: string }) => void> = [];
 const tabRemovedListeners: Array<(tabId: number) => void> = [];
+const installedListeners: Array<(details: { reason: string }) => void> = [];
+const contextMenuClickListeners: Array<(info: { menuItemId: string }) => void> = [];
 
 // In-memory storage mock
 const store: Record<string, unknown> = {};
@@ -21,8 +23,17 @@ const chromeMock = {
   sidePanel: {
     open: vi.fn(),
   },
+  contextMenus: {
+    create: vi.fn(),
+    onClicked: {
+      addListener: vi.fn((fn: (info: { menuItemId: string }) => void) => {
+        contextMenuClickListeners.push(fn);
+      }),
+    },
+  },
   tabs: {
     sendMessage: vi.fn(),
+    create: vi.fn(async (opts: { url: string }) => ({ id: 99, url: opts.url })),
     get: vi.fn(async (tabId: number) => ({
       id: tabId,
       url: 'http://localhost:3000/dashboard',
@@ -54,7 +65,13 @@ const chromeMock = {
         },
       ),
     },
+    onInstalled: {
+      addListener: vi.fn((fn: (details: { reason: string }) => void) => {
+        installedListeners.push(fn);
+      }),
+    },
     sendMessage: vi.fn(),
+    getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
   },
   storage: {
     local: {
@@ -67,6 +84,25 @@ const chromeMock = {
 };
 
 vi.stubGlobal('chrome', chromeMock);
+
+// Mock settings module — uses defaults since store is empty
+vi.mock('../../src/shared/settings', () => ({
+  getSettings: vi.fn(async () => ({
+    highlightColor: '#3B82F6',
+    highlightBorderWidth: 2,
+    bubbleBorderRadius: 12,
+    snapshotMaxLength: 500,
+    highlightFlashMs: 2000,
+    autoOpenPlayground: true,
+    locale: 'auto',
+    customHotkey: '',
+  })),
+}));
+
+// Mock icon-state module
+vi.mock('../../src/shared/icon-state', () => ({
+  setIconActive: vi.fn(),
+}));
 
 // Import background module (defineBackground stubbed by vitest.setup)
 import bgModule from '../../entrypoints/background';
@@ -94,6 +130,8 @@ describe('background service worker', () => {
     tabActivatedListeners.length = 0;
     tabUpdatedListeners.length = 0;
     tabRemovedListeners.length = 0;
+    installedListeners.length = 0;
+    contextMenuClickListeners.length = 0;
     for (const key of Object.keys(store)) delete store[key];
     vi.clearAllMocks();
 
@@ -268,6 +306,79 @@ describe('background service worker', () => {
       await tabUpdatedListeners[0](1, { status: 'loading' });
 
       expect(chromeMock.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('cleans up activeTabs on tab removed', async () => {
+      // Activate annotation mode on tab 1
+      chromeMock.tabs.query.mockResolvedValue([{ id: 1, url: 'http://localhost:3000/dashboard' }]);
+      await actionClickListeners[0]();
+
+      // Remove tab 1
+      tabRemovedListeners[0](1);
+
+      // Re-activate on a new tab to verify the old state was cleaned up
+      chromeMock.tabs.query.mockResolvedValue([{ id: 2, url: 'http://localhost:3000/dashboard' }]);
+      await actionClickListeners[0]();
+
+      // Should send active:true since tab 2 is fresh (tab 1 was removed)
+      expect(chromeMock.tabs.sendMessage).toHaveBeenLastCalledWith(
+        2,
+        expect.objectContaining({
+          type: MessageType.TOGGLE_ANNOTATION,
+          payload: { active: true },
+        }),
+      );
+    });
+  });
+
+  describe('UPDATE_ANNOTATION routing', () => {
+    it('updates an existing annotation in storage', async () => {
+      const ann = makeAnnotation({ id: 'update-me', userComment: 'Original' });
+      store['fixit:http://localhost:3000/dashboard'] = { annotations: [ann] };
+
+      const sendResponse = vi.fn();
+      const updated = makeAnnotation({ id: 'update-me', userComment: 'Updated comment' });
+      await messageListeners[0](
+        { type: MessageType.UPDATE_ANNOTATION, payload: updated },
+        { tab: { id: 1 } },
+        sendResponse,
+      );
+
+      await vi.waitFor(() => {
+        expect(chromeMock.storage.local.set).toHaveBeenCalled();
+      });
+      const setCall = chromeMock.storage.local.set.mock.calls[0][0] as Record<
+        string,
+        { annotations: FixItAnnotation[] }
+      >;
+      expect(setCall['fixit:http://localhost:3000/dashboard'].annotations).toHaveLength(1);
+      expect(setCall['fixit:http://localhost:3000/dashboard'].annotations[0].userComment).toBe(
+        'Updated comment',
+      );
+    });
+  });
+
+  describe('context menu', () => {
+    it('creates context menu on install', async () => {
+      await installedListeners[0]({ reason: 'install' });
+      expect(chromeMock.contextMenus.create).toHaveBeenCalledWith({
+        id: 'fixit-settings',
+        title: expect.any(String),
+        contexts: ['action'],
+      });
+    });
+
+    it('opens settings page when context menu item is clicked', () => {
+      contextMenuClickListeners[0]({ menuItemId: 'fixit-settings' });
+      expect(chromeMock.tabs.create).toHaveBeenCalledWith({
+        url: 'chrome-extension://test/settings.html',
+      });
+    });
+
+    it('ignores clicks on other menu items', async () => {
+      chromeMock.tabs.create.mockClear();
+      contextMenuClickListeners[0]({ menuItemId: 'other-item' });
+      expect(chromeMock.tabs.create).not.toHaveBeenCalled();
     });
   });
 });

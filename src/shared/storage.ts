@@ -1,8 +1,12 @@
 import type { FixItAnnotation } from './types';
 
 export function normalizeUrl(url: string): string {
-  const u = new URL(url);
-  return u.origin + u.pathname;
+  try {
+    const u = new URL(url);
+    return u.origin + u.pathname;
+  } catch {
+    return url;
+  }
 }
 
 export function getStorageKey(url: string): string {
