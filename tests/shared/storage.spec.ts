@@ -124,6 +124,33 @@ describe('addAnnotation', () => {
       'fixit:http://localhost:3000/dashboard': { annotations: [ann] },
     });
   });
+
+  // NOTE: Known race condition — addAnnotation reads then writes without
+  // atomic locking. Two rapid calls may overwrite each other (last-write-wins).
+  // This is acceptable for V1 because annotations are added sequentially
+  // by a single user in a single tab. If multi-tab annotation is ever needed,
+  // this must be replaced with an atomic read-modify-write operation.
+  it('concurrent addAnnotation calls result in last-write-wins', async () => {
+    const url = 'http://localhost:3000/dashboard';
+    const ann1 = makeAnnotation({ id: 'first', sequenceIndex: 1 });
+    const ann2 = makeAnnotation({ id: 'second', sequenceIndex: 2 });
+
+    // Fire both addAnnotation calls simultaneously
+    const p1 = addAnnotation(url, ann1);
+    const p2 = addAnnotation(url, ann2);
+    await Promise.all([p1, p2]);
+
+    // Both calls read the same initial state (empty), so the last write wins.
+    // The final stored value should contain exactly one annotation (the last writer's).
+    const finalSetCall = chromeMock.storage.local.set.mock.calls[
+      chromeMock.storage.local.set.mock.calls.length - 1
+    ] as [Record<string, { annotations: FixItAnnotation[] }>];
+    const finalAnnotations = finalSetCall[0][`fixit:${url}`].annotations;
+
+    // Last-write-wins: only the second annotation survives
+    expect(finalAnnotations).toHaveLength(1);
+    expect(finalAnnotations[0].id).toBe('second');
+  });
 });
 
 describe('deleteAnnotation', () => {

@@ -247,6 +247,73 @@ describe('AnnotationOverlay', () => {
     });
   });
 
+  describe('updateBadgePositions()', () => {
+    beforeEach(() => {
+      overlay.activate();
+    });
+
+    it('recalculates badge positions based on current element positions', () => {
+      const el = makeElement({ top: 100, left: 200, width: 150, height: 50 });
+      overlay.addBadge(el, 1);
+
+      const shadow = getShadowRoot()!;
+      const badge = shadow.querySelector('[data-fixit="badge-1"]') as HTMLElement;
+      expect(badge.style.top).toBe('89px'); // 100 - 11
+      expect(badge.style.left).toBe('339px'); // 200 + 150 - 11
+
+      // Simulate element movement by updating getBoundingClientRect
+      el.getBoundingClientRect = vi.fn(() => ({
+        top: 300,
+        left: 400,
+        width: 100,
+        height: 40,
+        right: 500,
+        bottom: 340,
+        x: 400,
+        y: 300,
+        toJSON: () => {},
+      }));
+
+      overlay.updateBadgePositions();
+
+      expect(badge.style.top).toBe('289px'); // 300 - 11
+      expect(badge.style.left).toBe('489px'); // 400 + 100 - 11
+    });
+
+    it('updates multiple badges independently', () => {
+      const el1 = makeElement({ top: 100, left: 200, width: 150, height: 50 });
+      const el2 = makeElement({ top: 300, left: 400, width: 150, height: 50 });
+      overlay.addBadge(el1, 1);
+      overlay.addBadge(el2, 2);
+
+      // Move only el2
+      el2.getBoundingClientRect = vi.fn(() => ({
+        top: 50,
+        left: 50,
+        width: 80,
+        height: 30,
+        right: 130,
+        bottom: 80,
+        x: 50,
+        y: 50,
+        toJSON: () => {},
+      }));
+
+      overlay.updateBadgePositions();
+
+      const shadow = getShadowRoot()!;
+      const badge1 = shadow.querySelector('[data-fixit="badge-1"]') as HTMLElement;
+      const badge2 = shadow.querySelector('[data-fixit="badge-2"]') as HTMLElement;
+
+      // el1 unchanged
+      expect(badge1.style.top).toBe('89px');
+      expect(badge1.style.left).toBe('339px');
+      // el2 moved
+      expect(badge2.style.top).toBe('39px'); // 50 - 11
+      expect(badge2.style.left).toBe('119px'); // 50 + 80 - 11
+    });
+  });
+
   describe('markDisconnected()', () => {
     beforeEach(() => {
       overlay.activate();

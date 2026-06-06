@@ -49,7 +49,7 @@ export async function init(): Promise<void> {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
         chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'HIGHLIGHT',
+          type: MessageType.HIGHLIGHT,
           payload: { cssSelector: ann.cssSelector },
         });
       }
@@ -65,8 +65,9 @@ export async function init(): Promise<void> {
 
   chrome.runtime.onMessage.addListener((message: Message<unknown>) => {
     if (message.type === MessageType.ANNOTATIONS_UPDATED) {
-      const payload = message.payload as { annotations: FixItAnnotation[]; url: string };
-      currentAnnotations = payload.annotations;
+      const payload = message.payload as Record<string, unknown> | undefined;
+      if (!payload || !Array.isArray(payload.annotations) || typeof payload.url !== 'string') return;
+      currentAnnotations = payload.annotations as FixItAnnotation[];
       currentUrl = payload.url;
       renderer.render(currentAnnotations);
       updateCopyButton();
@@ -102,7 +103,7 @@ export async function init(): Promise<void> {
       const pageTitle = tab?.title || 'Untitled';
       const md = await exportToMarkdown(currentAnnotations, pageTitle, currentUrl);
       const ok = await copyToClipboard(md);
-      showToast(ok ? t('sidepanel.copied') : 'Copy failed');
+      showToast(ok ? t('sidepanel.copied') : t('sidepanel.copyFailed'));
     });
   }
 
@@ -111,14 +112,14 @@ export async function init(): Promise<void> {
     clearBtn.addEventListener('click', () => {
       if (currentAnnotations.length === 0) return;
 
-      const confirmed = window.confirm(t('sidepanel.clearConfirm') || '确定清空所有标注？此操作不可撤销。');
+      const confirmed = window.confirm(t('sidepanel.clearConfirm'));
       if (!confirmed) return;
 
       chrome.runtime.sendMessage({ type: MessageType.CLEAR_ALL, payload: { url: currentUrl } });
       currentAnnotations = [];
       renderer.render([]);
       updateCopyButton();
-      showToast(t('sidepanel.cleared') || '已清空');
+      showToast(t('sidepanel.cleared'));
     });
   }
 }

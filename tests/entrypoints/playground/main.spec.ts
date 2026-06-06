@@ -160,6 +160,97 @@ describe('playground wizard', () => {
   });
 });
 
+describe('annotation creation flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = '<div id="step-container"></div>';
+  });
+
+  it('clicking a bug element shows the bubble', () => {
+    // Must go through welcome → start to set annotationMode = true
+    renderStep('welcome');
+    document.getElementById('start-btn')!.click();
+    // Now on bug1 with annotationMode = true
+
+    const container = document.getElementById('step-container')!;
+    const bugEl = container.querySelector('[data-bug="misaligned-btn"]') as HTMLElement;
+    bugEl.click();
+
+    const bubble = document.querySelector('.fixit-bubble');
+    expect(bubble).toBeTruthy();
+    const textarea = bubble!.querySelector('textarea');
+    expect(textarea).toBeTruthy();
+  });
+
+  it('entering text and clicking "添加" creates annotation and sends ADD_ANNOTATION', async () => {
+    renderStep('welcome');
+    document.getElementById('start-btn')!.click();
+
+    const container = document.getElementById('step-container')!;
+    const bugEl = container.querySelector('[data-bug="misaligned-btn"]') as HTMLElement;
+    bugEl.click();
+
+    const bubble = document.querySelector('.fixit-bubble')!;
+    const textarea = bubble.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Button is misaligned';
+
+    const addBtn = bubble.querySelector('.fixit-bubble-add') as HTMLButtonElement;
+    addBtn.click();
+
+    await vi.waitFor(() => {
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'ADD_ANNOTATION',
+          payload: expect.objectContaining({
+            userComment: 'Button is misaligned',
+          }),
+        }),
+      );
+    });
+  });
+
+  it('entering text and pressing Enter creates annotation', async () => {
+    renderStep('welcome');
+    document.getElementById('start-btn')!.click();
+
+    const container = document.getElementById('step-container')!;
+    const bugEl = container.querySelector('[data-bug="misaligned-btn"]') as HTMLElement;
+    bugEl.click();
+
+    const bubble = document.querySelector('.fixit-bubble')!;
+    const textarea = bubble.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Wrong alignment';
+
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    await vi.waitFor(() => {
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'ADD_ANNOTATION',
+          payload: expect.objectContaining({
+            userComment: 'Wrong alignment',
+          }),
+        }),
+      );
+    });
+  });
+
+  it('does not create annotation with empty text', () => {
+    renderStep('welcome');
+    document.getElementById('start-btn')!.click();
+
+    const container = document.getElementById('step-container')!;
+    const bugEl = container.querySelector('[data-bug="misaligned-btn"]') as HTMLElement;
+    bugEl.click();
+
+    const bubble = document.querySelector('.fixit-bubble')!;
+    const addBtn = bubble.querySelector('.fixit-bubble-add') as HTMLButtonElement;
+    addBtn.click();
+
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+  });
+});
+
 describe('fireworks', () => {
   it('creates burst groups with particles', () => {
     // Render done first to create the fireworks container

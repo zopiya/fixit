@@ -6,14 +6,6 @@
     <title>FixIt Settings</title>
     <style>
       @import "tailwindcss";
-
-      .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
-      .toggle input { opacity: 0; width: 0; height: 0; }
-      .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e2e8f0; border-radius: 12px; transition: 0.2s ease; }
-      .toggle-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-      .toggle input:checked + .toggle-slider { background: #3B82F6; }
-      .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
-      .toggle input:focus-visible + .toggle-slider { box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
@@ -51,7 +43,7 @@
             <div>
               <div class="text-sm font-medium" data-i18n="settings.hotkey">快捷键</div>
               <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.hotkey.desc">自定义激活快捷键（留空使用默认 Alt+Shift+F）</div>
-              <div class="text-xs text-slate-400 mt-1">推荐: Alt+Shift+F (无冲突)</div>
+              <div class="text-xs text-slate-400 mt-1" data-i18n="settings.hotkey.recommend">推荐: Alt+Shift+F (无冲突)</div>
             </div>
             <input type="text" id="custom-hotkey" placeholder="Alt+Shift+F" class="w-36 py-1.5 px-2.5 border border-slate-200 rounded-lg text-sm text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all" />
           </div>
@@ -124,9 +116,9 @@
               <div class="text-sm font-medium" data-i18n="settings.autoOpenPlayground">自动打开引导</div>
               <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.autoOpenPlayground.desc">首次安装时自动打开引导页面</div>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="auto-playground" checked />
-              <span class="toggle-slider"></span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="auto-playground" checked class="sr-only peer" />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
             </label>
           </div>
         </div>
@@ -143,7 +135,7 @@
             <input type="checkbox" id="ctx-comment" checked class="w-4 h-4 rounded border-slate-300 text-blue-500" />
             <div>
               <div class="text-sm font-medium" data-i18n="settings.ctx.comment">用户评论</div>
-              <div class="text-xs text-slate-400">User comment text</div>
+              <div class="text-xs text-slate-400" data-i18n="settings.copyContent.userCommentDesc">User comment text</div>
             </div>
           </label>
 
@@ -182,7 +174,7 @@
       </div>
 
       <!-- Reset -->
-      <div class="text-center mt-10">
+      <div class="mt-10 pt-6 border-t border-slate-200 text-center">
         <button id="reset-btn" class="text-sm text-slate-400 hover:text-slate-600 transition-colors px-4 py-2 rounded-lg hover:bg-slate-100" data-i18n="settings.reset">恢复默认设置</button>
       </div>
     </div>

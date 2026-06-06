@@ -257,6 +257,87 @@ describe('content script entry', () => {
     });
   });
 
+  describe('custom hotkey', () => {
+    const customSettings = {
+      highlightColor: '#3B82F6',
+      highlightBorderWidth: 2,
+      bubbleBorderRadius: 12,
+      snapshotMaxLength: 500,
+      highlightFlashMs: 2000,
+      autoOpenPlayground: true,
+      locale: 'auto' as const,
+      customHotkey: 'Alt+Shift+F',
+      copyContext: {
+        comment: true,
+        cssSelector: true,
+        xpath: true,
+        confidence: true,
+        htmlSnapshot: false,
+      },
+    };
+
+    it('registers hotkey handler when customHotkey is set', async () => {
+      // Deactivate from parent's main() call
+      sendToggleMessage(false);
+      vi.clearAllMocks();
+      messageListeners.length = 0;
+
+      // Override settings to include custom hotkey
+      const { getSettings } = await import('../../src/shared/settings');
+      vi.mocked(getSettings).mockResolvedValueOnce(customSettings);
+
+      // Call main() and await — hotkey handler is registered after async settings load
+      const opts = contentModule as unknown as { main: () => Promise<void> };
+      await opts.main();
+
+      // Activate so that deactivate() will clean up the hotkey handler later
+      sendToggleMessage(true);
+
+      // Simulate pressing Alt+Shift+F
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'F',
+          altKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+
+      expect(chromeMock.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'TOGGLE_ANNOTATION',
+          payload: { active: false },
+        }),
+      );
+
+      // Clean up: deactivate removes the hotkey handler (only works when active=true)
+      sendToggleMessage(false);
+    });
+
+    it('does not register hotkey handler when customHotkey is empty', async () => {
+      // Ensure no leaked handlers from the previous test
+      sendToggleMessage(false);
+      vi.clearAllMocks();
+      messageListeners.length = 0;
+
+      // Re-init with empty customHotkey (default mock)
+      const opts = contentModule as unknown as { main: () => Promise<void> };
+      await opts.main();
+
+      // Dispatch keyboard event — no handler should fire
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'F',
+          altKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+
+      expect(chromeMock.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+  });
+
   describe('HIGHLIGHT message', () => {
     it('shows highlight and scrolls to element when HIGHLIGHT is received', () => {
       sendToggleMessage(true);

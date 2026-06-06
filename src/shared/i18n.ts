@@ -95,6 +95,16 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.ctx.snapshot': 'HTML 快照',
     'settings.ctx.snapshot.desc': '元素的 HTML 片段',
     'contextMenu.settings': 'FixIt 设置',
+    'sidepanel.copyFailed': '复制失败',
+    'settings.hotkey.recommend': '推荐: Alt+Shift+F (无冲突)',
+    'settings.copyContent.userCommentDesc': '用户评论文本',
+    'annotation.untitled': '未命名',
+    'playground.task1.detail': '这是一个表单区域，提交按钮的位置明显偏移了：',
+    'playground.task2.detail': '注意这段文字的颜色：',
+    'playground.task3.detail': '观察下面两张卡片的布局：',
+    'playground.back': '← 返回',
+    'playground.copied': '已复制！',
+    'playground.copy': '复制',
   },
   en: {
     'sidepanel.title': 'Fix It Annotations',
@@ -190,6 +200,16 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.ctx.snapshot': 'HTML Snapshot',
     'settings.ctx.snapshot.desc': 'Element HTML fragment',
     'contextMenu.settings': 'FixIt Settings',
+    'sidepanel.copyFailed': 'Copy failed',
+    'settings.hotkey.recommend': 'Recommended: Alt+Shift+F (no conflicts)',
+    'settings.copyContent.userCommentDesc': 'User comment text',
+    'annotation.untitled': 'Untitled',
+    'playground.task1.detail': 'This is a form area where the submit button is clearly misaligned:',
+    'playground.task2.detail': 'Notice the color of this text:',
+    'playground.task3.detail': 'Observe the layout of these two cards:',
+    'playground.back': '← Back',
+    'playground.copied': 'Copied!',
+    'playground.copy': 'Copy',
   },
 };
 
@@ -210,6 +230,10 @@ export async function detectLocaleAsync(): Promise<Locale> {
 
 export function setLocale(locale: Locale): void {
   currentLocale = locale;
+}
+
+export function getLocale(): Locale {
+  return currentLocale;
 }
 
 export function t(key: string): string {

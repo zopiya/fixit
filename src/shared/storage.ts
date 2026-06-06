@@ -16,7 +16,11 @@ export function getStorageKey(url: string): string {
 export async function getAnnotations(url: string): Promise<FixItAnnotation[]> {
   const key = getStorageKey(url);
   const data = await chrome.storage.local.get(key);
-  return (data[key] as { annotations: FixItAnnotation[] } | undefined)?.annotations ?? [];
+  const entry = data[key] as Record<string, unknown> | undefined;
+  if (entry && typeof entry === 'object' && Array.isArray(entry.annotations)) {
+    return entry.annotations as FixItAnnotation[];
+  }
+  return [];
 }
 
 export async function setAnnotations(url: string, annotations: FixItAnnotation[]): Promise<void> {

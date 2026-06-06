@@ -1,7 +1,7 @@
 import { Highlighter } from '../src/content/highlighter';
 import { AnnotationOverlay } from '../src/content/overlay';
 import { generateCssSelector, generateXPath } from '../src/content/locator/index';
-import { MessageType } from '../src/shared/types';
+import { MessageType, type CssSelectorConfidence } from '../src/shared/types';
 import { getSettings } from '../src/shared/settings';
 
 export default defineContentScript({
@@ -11,10 +11,11 @@ export default defineContentScript({
     let active = false;
     let sequenceIndex = 0;
     let currentTarget: Element | null = null;
-    let currentCssResult: { selector: string; confidence: string } | null = null;
+    let currentCssResult: { selector: string; confidence: CssSelectorConfidence } | null = null;
     let currentXpathResult: { xpath: string; isRelative: boolean } | null = null;
     let highlighter: Highlighter | null = null;
     let scrollCleanup: (() => void) | null = null;
+    let hotkeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
     const settings = await getSettings();
     const overlay = new AnnotationOverlay();
@@ -133,6 +134,10 @@ export default defineContentScript({
       document.removeEventListener('mouseover', onMouseOver, true);
       document.removeEventListener('mouseout', onMouseOut, true);
       document.removeEventListener('click', onClick, true);
+      if (hotkeyHandler) {
+        document.removeEventListener('keydown', hotkeyHandler);
+        hotkeyHandler = null;
+      }
       scrollCleanup?.();
       scrollCleanup = null;
     }
@@ -164,7 +169,7 @@ export default defineContentScript({
 
     // Custom hotkey listener
     if (settings.customHotkey) {
-      const hotkeyHandler = (e: KeyboardEvent) => {
+      hotkeyHandler = (e: KeyboardEvent) => {
         const parts: string[] = [];
         if (e.ctrlKey) parts.push('Ctrl');
         if (e.altKey) parts.push('Alt');

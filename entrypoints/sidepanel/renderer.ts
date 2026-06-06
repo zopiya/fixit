@@ -65,7 +65,7 @@ export class AnnotationRenderer {
 
     const comment = document.createElement('div');
     comment.className = 'text-sm font-medium text-slate-800 leading-snug';
-    comment.textContent = ann.userComment || 'Untitled';
+    comment.textContent = ann.userComment || t('annotation.untitled');
 
     const meta = document.createElement('div');
     meta.className = 'flex items-center gap-2 mt-1.5';

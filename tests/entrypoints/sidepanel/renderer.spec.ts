@@ -113,6 +113,41 @@ describe('AnnotationRenderer', () => {
 
       expect(onHighlight).toHaveBeenCalledWith(ann);
     });
+
+    it('invokes onDelete callback when × button is clicked', () => {
+      const renderer = new AnnotationRenderer(container);
+      const onDelete = vi.fn();
+      renderer.onDelete = onDelete;
+
+      const ann = makeAnnotation({ id: 'delete-target' });
+      renderer.render([ann]);
+
+      // The × button is the last child of the annotation item
+      const item = container.querySelector('[data-testid="annotation-item"]') as HTMLElement;
+      const deleteBtn = item.querySelector('button') as HTMLButtonElement;
+      deleteBtn.click();
+
+      expect(onDelete).toHaveBeenCalledWith(ann);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it('delete button does not trigger onHighlight callback', () => {
+      const renderer = new AnnotationRenderer(container);
+      const onHighlight = vi.fn();
+      const onDelete = vi.fn();
+      renderer.onHighlight = onHighlight;
+      renderer.onDelete = onDelete;
+
+      const ann = makeAnnotation({ id: 'no-highlight' });
+      renderer.render([ann]);
+
+      const item = container.querySelector('[data-testid="annotation-item"]') as HTMLElement;
+      const deleteBtn = item.querySelector('button') as HTMLButtonElement;
+      deleteBtn.click();
+
+      expect(onDelete).toHaveBeenCalled();
+      expect(onHighlight).not.toHaveBeenCalled();
+    });
   });
 
   describe('high sequence index', () => {

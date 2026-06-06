@@ -1,6 +1,6 @@
 import type { FixItAnnotation } from '../../src/shared/types';
 import { circledNumber } from '../../src/shared/utils';
-import { t } from '../../src/shared/i18n';
+import { t, getLocale } from '../../src/shared/i18n';
 import { getSettings } from '../../src/shared/settings';
 
 const CONFIDENCE_EMOJI: Record<string, string> = {
@@ -40,14 +40,16 @@ export async function exportToMarkdown(
       ? ann.userComment.split('\n')[0]
       : 'Untitled';
 
+    const colon = getLocale() === 'zh' ? '：' : ':';
+
     lines.push(`## ${circledNumber(ann.sequenceIndex)} ${titleLine}`, '');
 
     if (ctx.comment) {
-      lines.push(`**${t('export.requirement')}**：${ann.userComment}`, '');
+      lines.push(`**${t('export.requirement')}**${colon} ${ann.userComment}`, '');
     }
 
     if (ctx.cssSelector || ctx.xpath || ctx.confidence) {
-      lines.push(`**${t('export.locator')}**：`, '');
+      lines.push(`**${t('export.locator')}**${colon}`, '');
       lines.push('| | |', '|---|---|');
 
       if (ctx.cssSelector) {

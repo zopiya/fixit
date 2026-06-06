@@ -120,7 +120,7 @@ describe('exportToMarkdown', () => {
       const ann = makeAnnotation({ userComment: 'Make this bigger and blue' });
       const md = await exportToMarkdown([ann], 'Page', 'http://example.com');
 
-      expect(md).toContain('**修改要求**：Make this bigger and blue');
+      expect(md).toContain('**修改要求**： Make this bigger and blue');
     });
 
     it('includes 元素定位 section header', async () => {
@@ -147,8 +147,8 @@ describe('exportToMarkdown', () => {
       const ann = makeAnnotation();
       const md = await exportToMarkdown([ann], 'Page', 'http://example.com');
 
-      expect(md).toContain('**Requirement**：');
-      expect(md).toContain('**Element Locator**：');
+      expect(md).toContain('**Requirement**:');
+      expect(md).toContain('**Element Locator**:');
       expect(md).toContain('🟢 High');
     });
   });

@@ -3,9 +3,13 @@ import type { FixItAnnotation } from '../../../src/shared/types';
 import { MessageType } from '../../../src/shared/types';
 
 // Use vi.hoisted so mock variables are available in hoisted vi.mock factories
-const { mockRender, mockCopyToClipboard } = vi.hoisted(() => ({
+const { mockRender, mockCopyToClipboard, mockRendererInstances } = vi.hoisted(() => ({
   mockRender: vi.fn(),
   mockCopyToClipboard: vi.fn().mockResolvedValue(true),
+  mockRendererInstances: [] as Array<{
+    onHighlight: ((ann: FixItAnnotation) => void) | null;
+    onDelete: ((ann: FixItAnnotation) => void) | null;
+  }>,
 }));
 
 // Mock chrome APIs — must be set up before importing main
@@ -39,6 +43,9 @@ vi.mock('../../../entrypoints/sidepanel/renderer', () => ({
     render = mockRender;
     clear = vi.fn();
     destroy = vi.fn();
+    constructor() {
+      mockRendererInstances.push(this);
+    }
   },
 }));
 
@@ -87,6 +94,7 @@ function makeAnnotation(overrides: Partial<FixItAnnotation> = {}): FixItAnnotati
 beforeEach(() => {
   _resetState();
   messageListeners.length = 0;
+  mockRendererInstances.length = 0;
   vi.clearAllMocks();
   document.body.innerHTML = `
     <div id="app">
@@ -125,7 +133,7 @@ describe('side panel main', () => {
     for (const listener of messageListeners) {
       listener({
         type: MessageType.ANNOTATIONS_UPDATED,
-        payload: { annotations },
+        payload: { annotations, url: 'http://localhost:3000/dashboard' },
       });
     }
 
@@ -238,5 +246,31 @@ describe('side panel main', () => {
     const clearCalls = (chromeMock.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
       .filter((call: unknown[]) => (call[0] as { type: string }).type === MessageType.CLEAR_ALL);
     expect(clearCalls).toHaveLength(0);
+  });
+
+  it('wires onHighlight to send HIGHLIGHT message via chrome.tabs.sendMessage', async () => {
+    await init();
+
+    // Get the renderer instance that init() created
+    const renderer = mockRendererInstances[0];
+    expect(renderer).toBeTruthy();
+    expect(renderer.onHighlight).toBeTruthy();
+
+    // Invoke the onHighlight callback directly
+    const ann = makeAnnotation({ id: 'hl-1', cssSelector: '.target-element' });
+    renderer.onHighlight!(ann);
+
+    // Verify it queries tabs and sends HIGHLIGHT message
+    expect(chromeMock.tabs.query).toHaveBeenCalledWith(
+      { active: true, currentWindow: true },
+      expect.any(Function),
+    );
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        type: MessageType.HIGHLIGHT,
+        payload: { cssSelector: '.target-element' },
+      }),
+    );
   });
 });

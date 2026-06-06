@@ -122,6 +122,30 @@ describe('generateCssSelector', () => {
       expect(result.selector).toBe('textarea[name=bio]');
       expect(result.confidence).toBe('name');
     });
+
+    it('returns name selector for button element', () => {
+      document.body.innerHTML = '<button name="submit">Submit</button>';
+      const el = document.querySelector('button')!;
+      const result = generateCssSelector(el);
+      expect(result.selector).toBe('button[name=submit]');
+      expect(result.confidence).toBe('name');
+    });
+
+    it('uses name attribute priority for button with no other distinguishing attributes', () => {
+      document.body.innerHTML = '<button name="action-btn">Go</button>';
+      const el = document.querySelector('button')!;
+      const result = generateCssSelector(el);
+      expect(result.selector).toBe('button[name=action-btn]');
+      expect(result.confidence).toBe('name');
+    });
+
+    it('skips button without name attribute at priority 4', () => {
+      document.body.innerHTML = '<button class="submit">Go</button>';
+      const el = document.querySelector('button')!;
+      const result = generateCssSelector(el);
+      // No name attribute, falls through to semantic-class
+      expect(result.confidence).toBe('semantic-class');
+    });
   });
 
   describe('priority 5: semantic-class', () => {

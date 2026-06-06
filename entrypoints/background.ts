@@ -78,32 +78,36 @@ export default defineBackground(() => {
 
       switch (message.type) {
         case MessageType.ADD_ANNOTATION: {
-          const annotation = message.payload as FixItAnnotation;
-          if (!annotation?.url) break;
+          const p = message.payload as Record<string, unknown> | undefined;
+          if (!p || typeof p.url !== 'string' || typeof p.id !== 'string') break;
+          const annotation = p as unknown as FixItAnnotation;
           addAnnotation(annotation.url, annotation).then(() => {
             notifySidePanel(tabId ?? 0);
-          });
+          }).catch(console.error);
           break;
         }
 
         case MessageType.UPDATE_ANNOTATION: {
-          const updated = message.payload as FixItAnnotation;
-          if (!updated?.url) break;
+          const p = message.payload as Record<string, unknown> | undefined;
+          if (!p || typeof p.url !== 'string' || typeof p.id !== 'string') break;
+          const updated = p as unknown as FixItAnnotation;
           getAnnotations(updated.url).then((existing) => {
             const list = existing.map((a) => (a.id === updated.id ? updated : a));
-            setAnnotations(updated.url, list).then(() => {
+            return setAnnotations(updated.url, list).then(() => {
               notifySidePanel(tabId ?? 0);
             });
-          });
+          }).catch(console.error);
           break;
         }
 
         case MessageType.DELETE_ANNOTATION: {
-          const { id, url: delUrl } = message.payload as { id: string; url: string };
+          const p = message.payload as Record<string, unknown> | undefined;
+          const id = typeof p?.id === 'string' ? p.id : undefined;
+          const delUrl = typeof p?.url === 'string' ? p.url : undefined;
           if (!id || !delUrl) break;
           deleteAnnotation(delUrl, id).then(() => {
             notifySidePanel(tabId ?? 0);
-          });
+          }).catch(console.error);
           break;
         }
 
@@ -112,7 +116,7 @@ export default defineBackground(() => {
           if (!getUrl) break;
           getAnnotations(getUrl).then((annotations) => {
             sendResponse({ annotations });
-          });
+          }).catch(console.error);
           return true; // keep channel open for async response
         }
 
@@ -121,7 +125,7 @@ export default defineBackground(() => {
           if (!clearUrl) break;
           clearAnnotations(clearUrl).then(() => {
             notifySidePanel(tabId ?? 0);
-          });
+          }).catch(console.error);
           break;
         }
 

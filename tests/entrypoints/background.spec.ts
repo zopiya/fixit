@@ -96,6 +96,13 @@ vi.mock('../../src/shared/settings', () => ({
     autoOpenPlayground: true,
     locale: 'auto',
     customHotkey: '',
+    copyContext: {
+      comment: true,
+      cssSelector: true,
+      xpath: true,
+      confidence: true,
+      htmlSnapshot: false,
+    },
   })),
 }));
 

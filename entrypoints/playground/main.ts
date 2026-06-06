@@ -54,7 +54,7 @@ function renderWelcome(container: HTMLElement): void {
       <p class="text-base text-slate-500 leading-relaxed mb-8 max-w-md mx-auto" data-i18n="playground.intro">
         通过三个简单任务，快速掌握 FixIt 的使用方法
       </p>
-      <button id="start-btn" class="px-8 py-3.5 bg-blue-500 text-white rounded-2xl text-base font-semibold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0">
+      <button id="start-btn" class="px-8 py-3.5 bg-blue-500 text-white rounded-xl text-base font-semibold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0">
         <span data-i18n="playground.start">开始</span> →
       </button>
     </div>
@@ -74,7 +74,7 @@ function renderBugStep(container: HTMLElement, bugNum: number): void {
       hintKey: 'playground.task1.hint',
       hintDefault: '点击下方的红色按钮，描述问题',
       content: `<button class="misaligned-btn" data-bug="misaligned-btn" data-i18n="playground.btn.submit">提交订单</button>`,
-      desc: '这是一个表单区域，提交按钮的位置明显偏移了：',
+      desc: t('playground.task1.detail'),
     },
     2: {
       titleKey: 'playground.task2.desc',
@@ -82,7 +82,7 @@ function renderBugStep(container: HTMLElement, bugNum: number): void {
       hintKey: 'playground.task2.hint',
       hintDefault: '这段文字颜色太浅，标注它',
       content: `<p class="wrong-color-text" data-bug="wrong-color-text" data-i18n="playground.wrong.text">这段重要通知使用了刺眼的黄绿色，在浅色背景上几乎不可读。应该使用深灰或蓝色等可读性更好的颜色。</p>`,
-      desc: '注意这段文字的颜色：',
+      desc: t('playground.task2.detail'),
     },
     3: {
       titleKey: 'playground.task3.desc',
@@ -90,7 +90,7 @@ function renderBugStep(container: HTMLElement, bugNum: number): void {
       hintKey: 'playground.task3.hint',
       hintDefault: '其中一张卡片错位了，标注它',
       content: `<div class="broken-layout"><div class="card" data-bug="card-ok"><h3>功能卡片 A</h3><p>这张卡片在网格中正确对齐。</p></div><div class="card" data-bug="broken-layout"><h3>功能卡片 B</h3><p>这张卡片偏移并旋转了 — 明显的布局问题。</p></div></div>`,
-      desc: '观察下面两张卡片的布局：',
+      desc: t('playground.task3.detail'),
     },
   };
 
@@ -109,7 +109,7 @@ function renderBugStep(container: HTMLElement, bugNum: number): void {
         ${cfg.content}
       </div>
       <div class="mt-6 flex justify-between items-center">
-        <button id="back-btn" class="px-4 py-2 text-sm text-slate-400 hover:text-slate-600 transition-colors">← 返回</button>
+        <button id="back-btn" class="px-4 py-2 text-sm text-slate-400 hover:text-slate-600 transition-colors" data-i18n="playground.back">← 返回</button>
         <div class="flex items-center gap-2 text-sm text-slate-400">
           <span>${stepNum}</span><span>/</span><span>3</span>
         </div>
@@ -289,8 +289,8 @@ function renderDone(container: HTMLElement): void {
       await navigator.clipboard.writeText(md);
       const btn = document.getElementById('copy-work-order');
       if (btn) {
-        btn.textContent = t('sidepanel.copied') || '已复制！';
-        setTimeout(() => { btn.textContent = t('sidepanel.copy') || '复制'; }, 2000);
+        btn.textContent = t('sidepanel.copied');
+        setTimeout(() => { btn.textContent = t('sidepanel.copy'); }, 2000);
       }
     } catch { /* clipboard blocked */ }
   });
@@ -316,7 +316,7 @@ function renderWorkOrderPreview(): void {
   }
 
   const lines: string[] = [];
-  for (const ann of annotations.sort((a, b) => a.sequenceIndex - b.sequenceIndex)) {
+  for (const ann of [...annotations].sort((a, b) => a.sequenceIndex - b.sequenceIndex)) {
     lines.push(`${circledNumber(ann.sequenceIndex)} ${ann.userComment}`);
     lines.push(`   CSS: ${ann.cssSelector}`);
     lines.push(`   XPath: ${ann.xpath}`);
