@@ -8,7 +8,7 @@ import { t, setLocale, detectLocaleAsync } from '../../src/shared/i18n';
 import { MessageType } from '../../src/shared/types';
 import { generateCssSelector } from '../../src/content/locator/css-selector';
 import { generateXPath } from '../../src/content/locator/xpath';
-import { circledNumber } from '../../src/shared/utils';
+import { circledNumber, generateId } from '../../src/shared/utils';
 import { exportToMarkdown } from '../sidepanel/exporter';
 import type { FixItAnnotation } from '../../src/shared/types';
 
@@ -140,7 +140,7 @@ function setupBugClickHandlers(): void {
 
       showInlineBubble(target, (comment: string) => {
         const annotation: FixItAnnotation = {
-          id: crypto.randomUUID(),
+          id: generateId(),
           url: window.location.origin + window.location.pathname,
           fullUrl: window.location.href,
           cssSelector: cssResult.selector,

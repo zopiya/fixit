@@ -41,6 +41,20 @@ describe('AnnotationRenderer', () => {
       expect(items).toHaveLength(2);
     });
 
+    it('marks stale annotations whose element is missing', () => {
+      const renderer = new AnnotationRenderer(container);
+      renderer.setStaleIds(new Set(['a2']));
+      renderer.render([
+        makeAnnotation({ id: 'a1', sequenceIndex: 1 }),
+        makeAnnotation({ id: 'a2', sequenceIndex: 2 }),
+      ]);
+
+      const items = container.querySelectorAll('[data-testid="annotation-item"]');
+      expect(items[0].getAttribute('data-stale')).toBeNull();
+      expect(items[1].getAttribute('data-stale')).toBe('true');
+      expect(container.querySelectorAll('[data-testid="stale-tag"]')).toHaveLength(1);
+    });
+
     it('shows circled sequence number for each annotation', () => {
       const renderer = new AnnotationRenderer(container);
       renderer.render([makeAnnotation({ sequenceIndex: 1 })]);

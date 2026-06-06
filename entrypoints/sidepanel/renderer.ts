@@ -13,11 +13,17 @@ const CONFIDENCE_LEVEL: Record<string, string> = {
 
 export class AnnotationRenderer {
   private container: HTMLElement;
+  private staleIds: Set<string> = new Set();
   onHighlight: ((annotation: FixItAnnotation) => void) | null = null;
   onDelete: ((annotation: FixItAnnotation) => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
+  }
+
+  /** Mark annotations whose element can't currently be found on the page. */
+  setStaleIds(ids: Set<string>): void {
+    this.staleIds = ids;
   }
 
   render(annotations: FixItAnnotation[]): void {
@@ -49,9 +55,15 @@ export class AnnotationRenderer {
   }
 
   private createItem(ann: FixItAnnotation): HTMLElement {
+    const isStale = this.staleIds.has(ann.id);
     const item = document.createElement('div');
     item.className = 'px-3 py-3 rounded-xl cursor-pointer transition-all hover:bg-slate-50 group';
     item.dataset.testid = 'annotation-item';
+    if (isStale) {
+      item.dataset.stale = 'true';
+      item.classList.add('opacity-60');
+      item.title = t('annotation.stale');
+    }
 
     const row = document.createElement('div');
     row.className = 'flex items-start gap-3';
@@ -93,6 +105,15 @@ export class AnnotationRenderer {
 
     meta.appendChild(dot);
     meta.appendChild(selector);
+
+    if (isStale) {
+      const staleTag = document.createElement('span');
+      staleTag.className = 'text-xs text-amber-500 font-medium shrink-0';
+      staleTag.dataset.testid = 'stale-tag';
+      staleTag.textContent = '⚠';
+      staleTag.title = t('annotation.stale');
+      meta.appendChild(staleTag);
+    }
     body.appendChild(comment);
     body.appendChild(meta);
     row.appendChild(seq);

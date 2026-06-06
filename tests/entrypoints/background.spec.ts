@@ -13,6 +13,7 @@ const contextMenuClickListeners: Array<(info: { menuItemId: string }) => void> =
 
 // In-memory storage mock
 const store: Record<string, unknown> = {};
+const sessionStore: Record<string, unknown> = {};
 
 const chromeMock = {
   action: {
@@ -80,6 +81,12 @@ const chromeMock = {
         Object.assign(store, items);
       }),
     },
+    session: {
+      get: vi.fn(async (key: string) => ({ [key]: sessionStore[key] })),
+      set: vi.fn(async (items: Record<string, unknown>) => {
+        Object.assign(sessionStore, items);
+      }),
+    },
   },
 };
 
@@ -140,6 +147,7 @@ describe('background service worker', () => {
     installedListeners.length = 0;
     contextMenuClickListeners.length = 0;
     for (const key of Object.keys(store)) delete store[key];
+    for (const key of Object.keys(sessionStore)) delete sessionStore[key];
     vi.clearAllMocks();
 
     // Run the main function (defineBackground returns the callback directly)
@@ -177,6 +185,47 @@ describe('background service worker', () => {
           payload: { active: false },
         }),
       );
+    });
+
+    it('does not message content scripts on restricted pages but still opens the panel', async () => {
+      chromeMock.tabs.query.mockResolvedValue([{ id: 5, url: 'chrome://extensions' }]);
+
+      await actionClickListeners[0]();
+
+      expect(chromeMock.tabs.sendMessage).not.toHaveBeenCalled();
+      expect(chromeMock.sidePanel.open).toHaveBeenCalledWith({ tabId: 5 });
+    });
+  });
+
+  describe('REQUEST_TOGGLE routing (custom hotkey)', () => {
+    it('toggles the sender tab when a content script requests it', async () => {
+      const sendResponse = vi.fn();
+      await messageListeners[0](
+        { type: MessageType.REQUEST_TOGGLE },
+        { tab: { id: 7, url: 'http://localhost:3000/dashboard' } },
+        sendResponse,
+      );
+
+      await vi.waitFor(() => {
+        expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
+          7,
+          expect.objectContaining({
+            type: MessageType.TOGGLE_ANNOTATION,
+            payload: { active: true },
+          }),
+        );
+      });
+    });
+
+    it('ignores the request when there is no sender tab', async () => {
+      const sendResponse = vi.fn();
+      await messageListeners[0](
+        { type: MessageType.REQUEST_TOGGLE },
+        {},
+        sendResponse,
+      );
+
+      expect(chromeMock.tabs.sendMessage).not.toHaveBeenCalled();
     });
   });
 

@@ -3,7 +3,7 @@ import type { FixItAnnotation, CssSelectorConfidence, Message } from '../../src/
 import { MessageType } from '../../src/shared/types';
 
 describe('MessageType enum', () => {
-  it('should have all 8 message types', () => {
+  it('should have all 11 message types', () => {
     expect(MessageType.ADD_ANNOTATION).toBe('ADD_ANNOTATION');
     expect(MessageType.UPDATE_ANNOTATION).toBe('UPDATE_ANNOTATION');
     expect(MessageType.DELETE_ANNOTATION).toBe('DELETE_ANNOTATION');
@@ -11,12 +11,15 @@ describe('MessageType enum', () => {
     expect(MessageType.GET_ANNOTATIONS).toBe('GET_ANNOTATIONS');
     expect(MessageType.CLEAR_ALL).toBe('CLEAR_ALL');
     expect(MessageType.TOGGLE_ANNOTATION).toBe('TOGGLE_ANNOTATION');
+    expect(MessageType.REQUEST_TOGGLE).toBe('REQUEST_TOGGLE');
     expect(MessageType.HIGHLIGHT).toBe('HIGHLIGHT');
+    expect(MessageType.ANNOTATION_STATUS).toBe('ANNOTATION_STATUS');
+    expect(MessageType.STORAGE_ERROR).toBe('STORAGE_ERROR');
   });
 
-  it('should have exactly 8 members', () => {
+  it('should have exactly 11 members', () => {
     const keys = Object.keys(MessageType);
-    expect(keys).toHaveLength(8);
+    expect(keys).toHaveLength(11);
   });
 });
 

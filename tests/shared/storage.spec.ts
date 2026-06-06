@@ -6,7 +6,10 @@ const store: Record<string, unknown> = {};
 const chromeMock = {
   storage: {
     local: {
-      get: vi.fn(async (key: string) => ({ [key]: store[key] })),
+      get: vi.fn(async (key: string | null) => {
+        if (key == null) return { ...store };
+        return { [key]: store[key] };
+      }),
       set: vi.fn(async (items: Record<string, unknown>) => {
         Object.assign(store, items);
       }),
@@ -24,6 +27,9 @@ import {
   addAnnotation,
   deleteAnnotation,
   clearAnnotations,
+  exportAllAnnotations,
+  importAnnotations,
+  StorageQuotaError,
 } from '../../src/shared/storage';
 
 function makeAnnotation(overrides: Partial<FixItAnnotation> = {}): FixItAnnotation {
@@ -186,5 +192,69 @@ describe('clearAnnotations', () => {
     expect(chromeMock.storage.local.set).toHaveBeenCalledWith({
       'fixit:http://localhost:3000/dashboard': { annotations: [] },
     });
+  });
+});
+
+describe('setAnnotations quota handling', () => {
+  it('throws StorageQuotaError when the quota is exceeded', async () => {
+    chromeMock.storage.local.set.mockRejectedValueOnce(
+      new Error('Resource::kQuotaBytes quota exceeded'),
+    );
+    await expect(setAnnotations('http://x/y', [makeAnnotation()])).rejects.toBeInstanceOf(
+      StorageQuotaError,
+    );
+  });
+
+  it('rethrows non-quota errors unchanged', async () => {
+    chromeMock.storage.local.set.mockRejectedValueOnce(new Error('some other failure'));
+    await expect(setAnnotations('http://x/y', [makeAnnotation()])).rejects.toThrow(
+      'some other failure',
+    );
+  });
+});
+
+describe('exportAllAnnotations', () => {
+  it('bundles every page but excludes settings and empty pages', async () => {
+    store['fixit:http://a/1'] = { annotations: [makeAnnotation({ id: 'a1' })] };
+    store['fixit:http://b/2'] = { annotations: [] };
+    store['fixit:settings'] = { locale: 'zh' };
+
+    const bundle = await exportAllAnnotations();
+
+    expect(bundle.version).toBe(1);
+    expect(Object.keys(bundle.data)).toEqual(['fixit:http://a/1']);
+    expect(bundle.data['fixit:http://a/1']).toHaveLength(1);
+  });
+});
+
+describe('importAnnotations', () => {
+  it('merges annotations by id and returns the count written', async () => {
+    store['fixit:http://a/1'] = { annotations: [makeAnnotation({ id: 'existing' })] };
+
+    const count = await importAnnotations({
+      version: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      data: {
+        'fixit:http://a/1': [makeAnnotation({ id: 'imported' })],
+      },
+    });
+
+    expect(count).toBe(1);
+    const saved = store['fixit:http://a/1'] as { annotations: FixItAnnotation[] };
+    expect(saved.annotations.map((a) => a.id).sort()).toEqual(['existing', 'imported']);
+  });
+
+  it('rejects a malformed payload', async () => {
+    await expect(importAnnotations({ nope: true })).rejects.toThrow();
+    await expect(importAnnotations(null)).rejects.toThrow();
+  });
+
+  it('ignores the settings key inside an import bundle', async () => {
+    const count = await importAnnotations({
+      version: 1,
+      exportedAt: 'x',
+      data: { 'fixit:settings': [makeAnnotation()] } as never,
+    });
+    expect(count).toBe(0);
   });
 });

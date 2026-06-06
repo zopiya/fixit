@@ -1,5 +1,6 @@
 import { t, setLocale, detectLocaleAsync } from '../../src/shared/i18n';
 import { getSettings, saveSettings, resetSettings } from '../../src/shared/settings';
+import { exportAllAnnotations, importAnnotations } from '../../src/shared/storage';
 
 /** Apply i18n translations to all elements with data-i18n attribute. */
 function applyI18n(): void {
@@ -8,6 +9,54 @@ function applyI18n(): void {
     if (key) {
       const translation = t(key);
       if (translation !== key) el.textContent = translation;
+    }
+  });
+}
+
+function showToast(message: string): void {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.remove('opacity-0');
+  toast.classList.add('opacity-100');
+  setTimeout(() => {
+    toast.classList.remove('opacity-100');
+    toast.classList.add('opacity-0');
+  }, 2000);
+}
+
+function setupDataControls(): void {
+  const exportBtn = document.getElementById('export-btn');
+  exportBtn?.addEventListener('click', async () => {
+    const bundle = await exportAllAnnotations();
+    if (Object.keys(bundle.data).length === 0) {
+      showToast(t('settings.export.empty'));
+      return;
+    }
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fixit-annotations-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(t('settings.export.done'));
+  });
+
+  const importBtn = document.getElementById('import-btn');
+  const importFile = document.getElementById('import-file') as HTMLInputElement | null;
+  importBtn?.addEventListener('click', () => importFile?.click());
+  importFile?.addEventListener('change', async () => {
+    const file = importFile.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const count = await importAnnotations(parsed);
+      showToast(`${t('settings.import.done')} (${count})`);
+    } catch {
+      showToast(t('settings.import.failed'));
+    } finally {
+      importFile.value = '';
     }
   });
 }
@@ -109,6 +158,8 @@ async function init(): Promise<void> {
       });
     }
   }
+
+  setupDataControls();
 
   // Reset button
   const resetBtn = document.getElementById('reset-btn');

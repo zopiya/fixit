@@ -8,7 +8,7 @@ export default defineConfig({
   manifest: {
     name: 'FixIt',
     description: '点选网页问题元素，一键生成 AI 修改工单',
-    permissions: ['storage', 'activeTab', 'scripting', 'sidePanel', 'contextMenus'],
+    permissions: ['storage', 'activeTab', 'sidePanel', 'contextMenus'],
     minimum_chrome_version: '114',
     side_panel: {
       default_path: 'entrypoints/sidepanel/index.html',

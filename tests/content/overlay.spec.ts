@@ -110,6 +110,56 @@ describe('AnnotationOverlay', () => {
     });
   });
 
+  describe('breadcrumb (element granularity)', () => {
+    beforeEach(() => {
+      overlay.activate();
+    });
+
+    it('renders a clickable chip per ancestor and marks the active one', () => {
+      const el = makeElement({ top: 0, left: 0, width: 100, height: 50 });
+      const onPickCrumb = vi.fn();
+      overlay.showBubble(el, { x: 50, y: 25 }, {
+        crumbs: ['body', 'section', 'button.btn'],
+        activeCrumb: 2,
+        onPickCrumb,
+      });
+
+      const shadow = getShadowRoot()!;
+      const chips = shadow.querySelectorAll('[data-fixit="crumb"]');
+      expect(chips).toHaveLength(3);
+      expect(chips[2].getAttribute('data-active')).toBe('true');
+      expect(chips[0].getAttribute('data-active')).toBeNull();
+
+      (chips[1] as HTMLElement).click();
+      expect(onPickCrumb).toHaveBeenCalledWith(1);
+    });
+
+    it('setBreadcrumbActive moves the active marker', () => {
+      const el = makeElement({ top: 0, left: 0, width: 100, height: 50 });
+      overlay.showBubble(el, { x: 50, y: 25 }, {
+        crumbs: ['body', 'section', 'button'],
+        activeCrumb: 2,
+        onPickCrumb: vi.fn(),
+      });
+
+      overlay.setBreadcrumbActive(0);
+
+      const shadow = getShadowRoot()!;
+      const chips = shadow.querySelectorAll('[data-fixit="crumb"]');
+      expect(chips[0].getAttribute('data-active')).toBe('true');
+      expect(chips[2].getAttribute('data-active')).toBeNull();
+    });
+
+    it('prefills the textarea when a comment is provided (edit mode)', () => {
+      const el = makeElement({ top: 0, left: 0, width: 100, height: 50 });
+      overlay.showBubble(el, { x: 50, y: 25 }, { comment: 'existing note' });
+
+      const shadow = getShadowRoot()!;
+      const textarea = shadow.querySelector('textarea') as HTMLTextAreaElement;
+      expect(textarea.value).toBe('existing note');
+    });
+  });
+
   describe('hideBubble()', () => {
     beforeEach(() => {
       overlay.activate();

@@ -72,6 +72,19 @@ export async function init(): Promise<void> {
       renderer.render(currentAnnotations);
       updateCopyButton();
     }
+
+    // Content script reports which annotations can't be located on the current page.
+    if (message.type === MessageType.ANNOTATION_STATUS) {
+      const payload = message.payload as { url?: string; missingIds?: string[] } | undefined;
+      if (!payload || payload.url !== currentUrl) return;
+      renderer.setStaleIds(new Set(payload.missingIds ?? []));
+      renderer.render(currentAnnotations);
+    }
+
+    // Storage quota exceeded — let the user know their last annotation wasn't saved.
+    if (message.type === MessageType.STORAGE_ERROR) {
+      showToast(t('sidepanel.storageFull'));
+    }
   });
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
