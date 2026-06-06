@@ -1,0 +1,28 @@
+{
+  "name": "fixit",
+  "description": "Chrome extension for frontend engineers: point-and-click UI annotations that generate structured AI work orders",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/chrome": "^0.1.43",
+    "eslint": "^10.4.1",
+    "happy-dom": "^20.10.1",
+    "prettier": "^3.8.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^4.1.8",
+    "wxt": "^0.20.26"
+  }
+}

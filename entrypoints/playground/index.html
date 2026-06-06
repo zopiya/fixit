@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FixIt — Playground</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f9fafb;
+        color: #1f2937;
+        min-height: 100vh;
+      }
+
+      /* ── Welcome Banner ── */
+      .welcome {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #fff;
+        padding: 32px 24px;
+        text-align: center;
+      }
+      .welcome h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .welcome p {
+        font-size: 15px;
+        opacity: 0.9;
+        max-width: 520px;
+        margin: 0 auto;
+        line-height: 1.5;
+      }
+      .welcome kbd {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-family: inherit;
+        font-size: 13px;
+      }
+
+      /* ── Layout ── */
+      .playground-layout {
+        display: flex;
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+        gap: 24px;
+      }
+
+      /* ── Task Panel (sidebar) ── */
+      .task-panel {
+        flex: 0 0 280px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: flex-start;
+      }
+      .task-panel h2 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #111827;
+      }
+      .task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f3f4f6;
+        transition: opacity 0.3s;
+      }
+      .task-item:last-child {
+        border-bottom: none;
+      }
+      .task-item.completed {
+        opacity: 0.5;
+      }
+      .task-item.completed .task-label {
+        text-decoration: line-through;
+      }
+      .task-number {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .task-item.completed .task-number {
+        background: #22c55e;
+        color: #fff;
+      }
+      .task-item.active .task-number {
+        background: #3b82f6;
+        color: #fff;
+      }
+      .task-label {
+        font-size: 14px;
+        line-height: 1.4;
+        color: #374151;
+      }
+      .task-hint {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+      }
+
+      /* ── Main Content Area (intentionally buggy) ── */
+      .content-area {
+        flex: 1;
+        min-height: 400px;
+      }
+
+      /* ── Buggy Elements ── */
+
+      /* Bug 1: Misaligned button */
+      .misaligned-btn {
+        display: inline-block;
+        padding: 10px 24px;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-left: 37px; /* intentionally off-grid */
+        margin-top: 16px;
+        margin-bottom: 24px;
+      }
+
+      /* Bug 2: Wrong color text */
+      .wrong-color-text {
+        font-size: 18px;
+        color: #a3e635; /* garish lime on light background — hard to read */
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        line-height: 1.5;
+      }
+
+      /* Bug 3: Broken layout */
+      .broken-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .broken-layout .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .broken-layout .card:nth-child(2) {
+        /* intentionally broken: overlaps grid */
+        margin-top: 40px;
+        margin-left: -20px;
+        transform: rotate(2deg);
+      }
+      .broken-layout .card h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .broken-layout .card p {
+        font-size: 13px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+
+      /* ── Completion Overlay ── */
+      .completion-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.4);
+        align-items: center;
+        justify-content: center;
+      }
+      .completion-overlay.visible {
+        display: flex;
+      }
+      .completion-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        text-align: center;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        position: relative;
+        z-index: 10001;
+      }
+      .completion-card h2 {
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+      .completion-card p {
+        font-size: 15px;
+        color: #6b7280;
+        line-height: 1.5;
+      }
+
+      /* ── Firework Animation (pure CSS) ── */
+      .fireworks {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10000;
+        overflow: hidden;
+      }
+      .firework {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+      .firework::before,
+      .firework::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+      }
+
+      @keyframes fw-rise {
+        0% { transform: translateY(0) scale(1); opacity: 1; }
+        100% { transform: translateY(-180px) scale(0); opacity: 0; }
+      }
+      @keyframes fw-burst {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      .firework.burst {
+        animation: none;
+      }
+
+      /* Individual burst particles */
+      .particle {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        animation: particle-fly 1.2s ease-out forwards;
+      }
+
+      @keyframes particle-fly {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      /* Different particle directions */
+      .particle:nth-child(1)  { --tx: -80px; --ty: -90px; background: #ef4444; }
+      .particle:nth-child(2)  { --tx: 60px;  --ty: -100px; background: #f59e0b; }
+      .particle:nth-child(3)  { --tx: -40px; --ty: 70px; background: #22c55e; }
+      .particle:nth-child(4)  { --tx: 90px;  --ty: 40px; background: #3b82f6; }
+      .particle:nth-child(5)  { --tx: -100px; --ty: 20px; background: #8b5cf6; }
+      .particle:nth-child(6)  { --tx: 30px;  --ty: -120px; background: #ec4899; }
+      .particle:nth-child(7)  { --tx: -70px; --ty: -50px; background: #14b8a6; }
+      .particle:nth-child(8)  { --tx: 110px; --ty: -30px; background: #f97316; }
+      .particle:nth-child(9)  { --tx: -20px; --ty: 100px; background: #06b6d4; }
+      .particle:nth-child(10) { --tx: 50px;  --ty: 80px; background: #e11d48; }
+      .particle:nth-child(11) { --tx: -90px; --ty: -70px; background: #84cc16; }
+      .particle:nth-child(12) { --tx: 70px;  --ty: 60px; background: #a855f7; }
+
+      .particle {
+        animation: particle-fly 1.2s ease-out forwards;
+        transform: translate(var(--tx), var(--ty));
+      }
+
+      @keyframes particle-fly {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+      }
+
+      /* Staggered firework launches */
+      .firework-launcher {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .burst-group {
+        position: absolute;
+        animation: burst-appear 0.1s linear forwards;
+        opacity: 0;
+      }
+
+      @keyframes burst-appear {
+        to { opacity: 1; }
+      }
+
+      .burst-group:nth-child(1) { left: 20%; top: 30%; animation-delay: 0.2s; }
+      .burst-group:nth-child(2) { left: 70%; top: 20%; animation-delay: 0.6s; }
+      .burst-group:nth-child(3) { left: 45%; top: 40%; animation-delay: 1.0s; }
+      .burst-group:nth-child(4) { left: 80%; top: 50%; animation-delay: 1.4s; }
+      .burst-group:nth-child(5) { left: 15%; top: 55%; animation-delay: 1.8s; }
+
+      /* ── Instructions ── */
+      .instructions {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-top: 24px;
+      }
+      .instructions h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .instructions ol {
+        padding-left: 20px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #4b5563;
+      }
+      .instructions li {
+        margin-bottom: 4px;
+      }
+      .instructions kbd {
+        display: inline-block;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-family: inherit;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="welcome">
+      <h1>Welcome to FixIt Playground!</h1>
+      <p>
+        We prepared a page with <strong>intentional UI bugs</strong>.
+        Press <kbd>Alt + F</kbd> to activate FixIt, then try to fix them.
+      </p>
+    </div>
+
+    <div class="playground-layout">
+      <!-- Task Panel -->
+      <aside class="task-panel" id="task-panel">
+        <h2>Guided Tasks</h2>
+
+        <div class="task-item active" data-task="1">
+          <div class="task-number">1</div>
+          <div>
+            <div class="task-label">Click the misaligned button</div>
+            <div class="task-hint">Activate FixIt, then click the red button below and add a comment.</div>
+          </div>
+        </div>
+
+        <div class="task-item" data-task="2">
+          <div class="task-number">2</div>
+          <div>
+            <div class="task-label">Find the wrong color text</div>
+            <div class="task-hint">The lime-green text is hard to read. Annotate it.</div>
+          </div>
+        </div>
+
+        <div class="task-item" data-task="3">
+          <div class="task-number">3</div>
+          <div>
+            <div class="task-label">Annotate the broken layout</div>
+            <div class="task-hint">One of the cards is misaligned and rotated. Mark it.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Content with intentional bugs -->
+      <main class="content-area">
+        <section>
+          <h2 style="font-size:20px; margin-bottom:8px;">Bug #1 — Misaligned Button</h2>
+          <p style="font-size:14px; color:#6b7280; margin-bottom:4px;">
+            This submit button is slightly off the grid. It should align with the content above.
+          </p>
+          <button class="misaligned-btn" data-bug="misaligned-btn">Submit Order</button>
+        </section>
+
+        <section>
+          <h2 style="font-size:20px; margin-bottom:8px;">Bug #2 — Wrong Color Text</h2>
+          <p class="wrong-color-text" data-bug="wrong-color-text">
+            This important notification uses a garish lime-green color that is nearly invisible
+            on a light background. It should use a readable color like dark gray or blue.
+          </p>
+        </section>
+
+        <section>
+          <h2 style="font-size:20px; margin-bottom:8px;">Bug #3 — Broken Layout</h2>
+          <div class="broken-layout">
+            <div class="card" data-bug="card-ok">
+              <h3>Feature Card A</h3>
+              <p>This card is properly aligned within the grid layout.</p>
+            </div>
+            <div class="card" data-bug="broken-layout">
+              <h3>Feature Card B</h3>
+              <p>This card is offset and rotated — clearly a layout bug that needs fixing.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="instructions">
+          <h3>How to use FixIt</h3>
+          <ol>
+            <li>Press <kbd>Alt + F</kbd> to toggle annotation mode.</li>
+            <li>Hover over any element to see a blue highlight.</li>
+            <li>Click an element to open the annotation bubble.</li>
+            <li>Type your comment and press <kbd>Enter</kbd> to save.</li>
+            <li>Open the Side Panel to see all annotations.</li>
+            <li>Click <strong>Copy AI Work Order</strong> to generate a Markdown work order.</li>
+          </ol>
+        </div>
+      </main>
+    </div>
+
+    <!-- Completion overlay (hidden by default) -->
+    <div class="completion-overlay" id="completion-overlay">
+      <div class="fireworks" id="fireworks"></div>
+      <div class="completion-card">
+        <h2>Congratulations!</h2>
+        <p>You've mastered FixIt. Now go annotate your real projects!</p>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
