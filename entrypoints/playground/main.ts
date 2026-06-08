@@ -9,6 +9,7 @@ import { MessageType } from '../../src/shared/types';
 import { generateCssSelector } from '../../src/content/locator/css-selector';
 import { generateXPath } from '../../src/content/locator/xpath';
 import { circledNumber, generateId } from '../../src/shared/utils';
+import { getSettings } from '../../src/shared/settings';
 import { exportToMarkdown } from '../sidepanel/exporter';
 import type { FixItAnnotation } from '../../src/shared/types';
 
@@ -16,6 +17,7 @@ import type { FixItAnnotation } from '../../src/shared/types';
 let currentStep: 'welcome' | 'bug1' | 'bug2' | 'bug3' | 'done' = 'welcome';
 let annotationMode = false;
 let sequenceIndex = 0;
+let submitMode: 'mod-enter' | 'enter' = 'mod-enter';
 const annotations: FixItAnnotation[] = [];
 
 // ── i18n ──
@@ -207,29 +209,40 @@ function showInlineBubble(el: Element, onConfirm: (comment: string) => void): vo
   const addBtn = document.createElement('button');
   addBtn.className = 'fixit-bubble-add';
   addBtn.textContent = t('bubble.add') || '添加';
-  addBtn.addEventListener('click', () => {
+  const confirm = () => {
     const value = textarea.value.trim();
     if (value) {
       onConfirm(value);
       bubble.remove();
     }
-  });
+  };
+  addBtn.addEventListener('click', confirm);
   bubble.appendChild(addBtn);
+
+  const hint = document.createElement('div');
+  hint.className = 'fixit-bubble-hint';
+  hint.textContent = submitMode === 'mod-enter' ? t('bubble.hintMod') : t('bubble.hintEnter');
+  bubble.appendChild(hint);
 
   document.body.appendChild(bubble);
   textarea.focus();
 
   textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const value = textarea.value.trim();
-      if (value) {
-        onConfirm(value);
-        bubble.remove();
-      }
-    }
+    // Ignore Enter while an IME composition is active (e.g. choosing a pinyin candidate).
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Escape') {
       bubble.remove();
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    if (submitMode === 'mod-enter') {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        confirm();
+      }
+    } else if (!e.shiftKey) {
+      e.preventDefault();
+      confirm();
     }
   });
 }
@@ -359,6 +372,11 @@ function showFireworks(): void {
 async function init(): Promise<void> {
   const locale = await detectLocaleAsync();
   setLocale(locale);
+  try {
+    submitMode = (await getSettings()).submitShortcut;
+  } catch {
+    /* keep default */
+  }
   renderStep('welcome');
 }
 

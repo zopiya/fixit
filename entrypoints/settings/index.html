@@ -113,6 +113,17 @@
 
           <div class="flex items-center justify-between py-3 border-t border-slate-50">
             <div>
+              <div class="text-sm font-medium" data-i18n="settings.submitShortcut">提交快捷键</div>
+              <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.submitShortcut.desc">在批注气泡中确认标注的方式</div>
+            </div>
+            <select id="submit-shortcut" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white cursor-pointer focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all">
+              <option value="mod-enter" data-i18n="settings.submitShortcut.modEnter">⌘/Ctrl + Enter（Enter 换行）</option>
+              <option value="enter" data-i18n="settings.submitShortcut.enter">Enter（Shift+Enter 换行）</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between py-3 border-t border-slate-50">
+            <div>
               <div class="text-sm font-medium" data-i18n="settings.autoOpenPlayground">自动打开引导</div>
               <div class="text-xs text-slate-400 mt-0.5" data-i18n="settings.autoOpenPlayground.desc">首次安装时自动打开引导页面</div>
             </div>

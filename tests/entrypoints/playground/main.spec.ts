@@ -209,7 +209,7 @@ describe('annotation creation flow', () => {
     });
   });
 
-  it('entering text and pressing Enter creates annotation', async () => {
+  it('Ctrl/Cmd+Enter creates an annotation (default submit shortcut); plain Enter does not', async () => {
     renderStep('welcome');
     document.getElementById('start-btn')!.click();
 
@@ -221,7 +221,14 @@ describe('annotation creation flow', () => {
     const textarea = bubble.querySelector('textarea') as HTMLTextAreaElement;
     textarea.value = 'Wrong alignment';
 
+    // Plain Enter must NOT submit under the default mod-enter mode (lets users type freely).
     textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+
+    // Ctrl+Enter submits.
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }),
+    );
 
     await vi.waitFor(() => {
       expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(

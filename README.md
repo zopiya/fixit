@@ -41,7 +41,7 @@ bun run dev
 
 1. Open `chrome://extensions/`
 2. Enable **Developer mode** (top right)
-3. Click **Load unpacked** → select `.output/chrome-mv3/`
+3. Click **Load unpacked** → select `dist/chrome-mv3/`
 4. Pin the FixIt icon to your toolbar
 
 Press `Alt+Shift+F` to toggle annotation mode.
@@ -185,7 +185,7 @@ fixit/
 
 ```bash
 bun run dev          # Watch mode with HMR
-bun run build        # Production build to .output/chrome-mv3/
+bun run build        # Production build to dist/chrome-mv3/
 bun run typecheck    # TypeScript type checking
 bun run lint         # ESLint check
 bun run format       # Prettier formatting
@@ -234,17 +234,17 @@ bun run test src/content/locator/css-selector.spec.ts  # Single file
 
 ```bash
 bun run build
-# Output: .output/chrome-mv3/
+# Output: dist/chrome-mv3/
 ```
 
 ### Load in Chrome (Development)
 
 1. `chrome://extensions/` → Developer mode → Load unpacked
-2. Select `.output/chrome-mv3/`
+2. Select `dist/chrome-mv3/`
 
 ### Publish to Chrome Web Store
 
-1. Build: `cd .output/chrome-mv3 && zip -r ../fixit.zip .`
+1. Build: `cd dist/chrome-mv3 && zip -r ../fixit.zip .`
 2. Go to [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
 3. Pay $5 registration fee (one-time)
 4. Upload `fixit.zip`, fill in store listing (category: Developer Tools)

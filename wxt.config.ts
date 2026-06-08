@@ -2,6 +2,8 @@ import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  // Emit the build to ./dist (instead of WXT's default .output). dist is git-ignored.
+  outDir: 'dist',
   vite: () => ({
     plugins: [tailwindcss()],
   }),

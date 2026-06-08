@@ -8,6 +8,10 @@ export interface FixItSettings {
   snapshotMaxLength: number;
   highlightFlashMs: number;
   autoOpenPlayground: boolean;
+  // How to confirm an annotation from the bubble:
+  //  'mod-enter' → ⌘/Ctrl+Enter submits, Enter inserts a newline (IME-friendly)
+  //  'enter'     → Enter submits, Shift+Enter inserts a newline
+  submitShortcut: 'mod-enter' | 'enter';
 
   // Locale
   locale: 'auto' | 'zh' | 'en';
@@ -34,6 +38,7 @@ const DEFAULTS: FixItSettings = {
   snapshotMaxLength: 500,
   highlightFlashMs: 2000,
   autoOpenPlayground: true,
+  submitShortcut: 'mod-enter',
   locale: 'auto',
   customHotkey: '',
   copyContext: {

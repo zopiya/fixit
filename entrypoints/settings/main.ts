@@ -114,6 +114,15 @@ async function init(): Promise<void> {
     );
   }
 
+  // Submit shortcut
+  const submitShortcut = document.getElementById('submit-shortcut') as HTMLSelectElement | null;
+  if (submitShortcut) {
+    submitShortcut.value = settings.submitShortcut;
+    submitShortcut.addEventListener('change', () =>
+      saveSettings({ submitShortcut: submitShortcut.value as 'mod-enter' | 'enter' }),
+    );
+  }
+
   // Auto-open playground
   const autoPlayground = document.getElementById('auto-playground') as HTMLInputElement | null;
   if (autoPlayground) {

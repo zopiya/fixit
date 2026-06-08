@@ -33,6 +33,7 @@ describe('getDefaults()', () => {
     expect(defaults.snapshotMaxLength).toBe(500);
     expect(defaults.highlightFlashMs).toBe(2000);
     expect(defaults.autoOpenPlayground).toBe(true);
+    expect(defaults.submitShortcut).toBe('mod-enter');
     expect(defaults.locale).toBe('auto');
     expect(defaults.copyContext).toEqual({
       comment: true,

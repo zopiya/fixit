@@ -204,6 +204,14 @@ describe('content script entry', () => {
       el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       expect(mockShow).not.toHaveBeenCalled();
     });
+
+    it('does not highlight our own overlay host (prevents bubble flicker)', () => {
+      sendToggleMessage(true);
+      const host = document.createElement('fixit-overlay');
+      document.body.appendChild(host);
+      host.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      expect(mockShow).not.toHaveBeenCalledWith(host);
+    });
   });
 
   describe('click-to-annotate', () => {
@@ -307,6 +315,7 @@ describe('content script entry', () => {
       highlightFlashMs: 2000,
       autoOpenPlayground: true,
       locale: 'auto' as const,
+      submitShortcut: 'mod-enter' as const,
       customHotkey: 'Alt+Shift+F',
       copyContext: {
         comment: true,

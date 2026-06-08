@@ -14,6 +14,7 @@ const { mockRender, mockCopyToClipboard, mockRendererInstances } = vi.hoisted(()
 
 // Mock chrome APIs — must be set up before importing main
 const messageListeners: Array<(msg: unknown) => void> = [];
+const storageChangeListeners: Array<(changes: unknown, area: string) => void> = [];
 
 const chromeMock = {
   runtime: {
@@ -32,6 +33,17 @@ const chromeMock = {
     }),
     sendMessage: vi.fn(),
   },
+  storage: {
+    local: {
+      get: vi.fn(async () => ({})),
+      set: vi.fn(async () => {}),
+    },
+    onChanged: {
+      addListener: vi.fn((fn: (changes: unknown, area: string) => void) => {
+        storageChangeListeners.push(fn);
+      }),
+    },
+  },
 };
 
 vi.stubGlobal('chrome', chromeMock);
@@ -41,6 +53,7 @@ vi.mock('../../../entrypoints/sidepanel/renderer', () => ({
     onHighlight: ((ann: FixItAnnotation) => void) | null = null;
     onDelete: ((ann: FixItAnnotation) => void) | null = null;
     render = mockRender;
+    setStaleIds = vi.fn();
     clear = vi.fn();
     destroy = vi.fn();
     constructor() {
@@ -272,5 +285,48 @@ describe('side panel main', () => {
         payload: { cssSelector: '.target-element' },
       }),
     );
+  });
+
+  describe('storage reactivity (fixes side-panel delete)', () => {
+    it('re-renders when this page\'s annotations change in storage', async () => {
+      await init();
+      mockRender.mockClear();
+
+      const ann = makeAnnotation({ id: 'x' });
+      for (const fn of storageChangeListeners) {
+        fn(
+          { 'fixit:http://localhost:3000/dashboard': { newValue: { annotations: [ann] } } },
+          'local',
+        );
+      }
+
+      expect(mockRender).toHaveBeenCalledWith([ann]);
+    });
+
+    it('renders an empty list when the page key is cleared', async () => {
+      await init();
+      mockRender.mockClear();
+
+      for (const fn of storageChangeListeners) {
+        fn(
+          { 'fixit:http://localhost:3000/dashboard': { newValue: { annotations: [] } } },
+          'local',
+        );
+      }
+
+      expect(mockRender).toHaveBeenCalledWith([]);
+    });
+
+    it('ignores changes to other keys or non-local areas', async () => {
+      await init();
+      mockRender.mockClear();
+
+      for (const fn of storageChangeListeners) {
+        fn({ 'fixit:http://other/page': { newValue: { annotations: [makeAnnotation()] } } }, 'local');
+        fn({ 'fixit:http://localhost:3000/dashboard': { newValue: { annotations: [] } } }, 'sync');
+      }
+
+      expect(mockRender).not.toHaveBeenCalled();
+    });
   });
 });

@@ -11,6 +11,7 @@ const { mockGetSettings } = vi.hoisted(() => {
       snapshotMaxLength: 500,
       highlightFlashMs: 2000,
       autoOpenPlayground: true,
+      submitShortcut: 'mod-enter' as const,
       locale: 'auto',
       customHotkey: '',
       copyContext: {
@@ -39,6 +40,7 @@ describe('i18n', () => {
       snapshotMaxLength: 500,
       highlightFlashMs: 2000,
       autoOpenPlayground: true,
+      submitShortcut: 'mod-enter' as const,
       locale: 'auto',
       customHotkey: '',
       copyContext: {
@@ -98,6 +100,7 @@ describe('i18n', () => {
         snapshotMaxLength: 500,
         highlightFlashMs: 2000,
         autoOpenPlayground: true,
+      submitShortcut: 'mod-enter' as const,
         locale: 'zh',
         customHotkey: '',
         copyContext: { comment: true, cssSelector: true, xpath: true, confidence: true, htmlSnapshot: false },
@@ -114,6 +117,7 @@ describe('i18n', () => {
         snapshotMaxLength: 500,
         highlightFlashMs: 2000,
         autoOpenPlayground: true,
+      submitShortcut: 'mod-enter' as const,
         locale: 'auto',
         customHotkey: '',
         copyContext: { comment: true, cssSelector: true, xpath: true, confidence: true, htmlSnapshot: false },

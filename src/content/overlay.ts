@@ -270,11 +270,14 @@ export class AnnotationOverlay {
       crumbs?: string[];
       activeCrumb?: number;
       onPickCrumb?: (index: number) => void;
+      submitMode?: 'mod-enter' | 'enter';
     },
   ): void {
     this.mount();
     if (!this.shadow) return;
     this.hideBubble();
+
+    const submitMode = opts?.submitMode ?? 'enter';
 
     const bubble = document.createElement('div');
     bubble.setAttribute('data-fixit', 'bubble');
@@ -321,10 +324,7 @@ export class AnnotationOverlay {
 
     const hint = document.createElement('div');
     hint.setAttribute('data-fixit', 'bubble-hint');
-    hint.textContent =
-      opts?.crumbs && opts.crumbs.length > 1
-        ? `${t('bubble.hint')} ${t('bubble.pickHint')}`
-        : t('bubble.hint');
+    hint.textContent = submitMode === 'mod-enter' ? t('bubble.hintMod') : t('bubble.hintEnter');
     bubble.appendChild(hint);
 
     this.shadow.appendChild(bubble);
@@ -346,17 +346,34 @@ export class AnnotationOverlay {
 
     textarea.focus();
 
+    const submit = () => {
+      const value = textarea.value.trim();
+      if (value && this.onConfirm) this.onConfirm(value);
+    };
+
     // Keyboard shortcuts
     this.keydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const value = textarea.value.trim();
-        if (value && this.onConfirm) {
-          this.onConfirm(value);
+      // Ignore keystrokes that belong to an active IME composition (e.g. pressing Enter to
+      // pick a Chinese/Japanese candidate) — otherwise it would submit a half-typed comment.
+      if (e.isComposing || e.keyCode === 229) return;
+
+      if (e.key === 'Escape') {
+        this.onCancel?.();
+        return;
+      }
+      if (e.key !== 'Enter') return;
+
+      if (submitMode === 'mod-enter') {
+        // ⌘/Ctrl+Enter submits; a bare Enter inserts a newline.
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          submit();
         }
-      } else if (e.key === 'Escape') {
-        if (this.onCancel) {
-          this.onCancel();
+      } else {
+        // Enter submits; Shift+Enter inserts a newline.
+        if (!e.shiftKey) {
+          e.preventDefault();
+          submit();
         }
       }
     };

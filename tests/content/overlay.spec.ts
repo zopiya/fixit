@@ -218,6 +218,49 @@ describe('AnnotationOverlay', () => {
       expect(onCancel).toHaveBeenCalled();
     });
 
+    it('Enter during IME composition does not trigger confirm (pinyin candidate selection)', () => {
+      const onConfirm = vi.fn();
+      overlay.onConfirm = onConfirm;
+
+      const el = makeElement({ top: 0, left: 0, width: 100, height: 50 });
+      overlay.showBubble(el, { x: 50, y: 25 });
+
+      const shadow = getShadowRoot()!;
+      const textarea = shadow.querySelector('textarea') as HTMLTextAreaElement;
+      textarea.value = '中文';
+
+      const composingEnter = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        isComposing: true,
+        bubbles: true,
+      });
+      textarea.dispatchEvent(composingEnter);
+
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('mod-enter mode: plain Enter inserts a newline, Ctrl/Cmd+Enter submits', () => {
+      const onConfirm = vi.fn();
+      overlay.onConfirm = onConfirm;
+
+      const el = makeElement({ top: 0, left: 0, width: 100, height: 50 });
+      overlay.showBubble(el, { x: 50, y: 25 }, { submitMode: 'mod-enter' });
+
+      const shadow = getShadowRoot()!;
+      const textarea = shadow.querySelector('textarea') as HTMLTextAreaElement;
+      textarea.value = 'note';
+
+      // Plain Enter must NOT submit in mod-enter mode.
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      // Ctrl+Enter (and Cmd+Enter) submit.
+      textarea.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }),
+      );
+      expect(onConfirm).toHaveBeenCalledWith('note');
+    });
+
     it('Enter key does not trigger confirm when textarea is empty', () => {
       const onConfirm = vi.fn();
       overlay.onConfirm = onConfirm;

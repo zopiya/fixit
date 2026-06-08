@@ -251,6 +251,10 @@ export default defineContentScript({
 
     function onMouseOver(e: MouseEvent) {
       if (!active) return;
+      // Don't highlight our own overlay (the bubble retargets to the host element) — doing so
+      // drew a flickering box over the bubble while the user was typing. Also pause hover
+      // highlighting entirely while the bubble is open, to keep focus on the comment.
+      if (isFixitHost(e.target) || currentTarget) return;
       const target = e.target as Element;
       if (target === document.documentElement || target === document.body) return;
       if (highlighter) highlighter.show(target);
@@ -305,6 +309,7 @@ export default defineContentScript({
           crumbs: pickChain.map(describeElement),
           activeCrumb: pickIndex,
           onPickCrumb: selectCandidate,
+          submitMode: settings.submitShortcut,
         },
       );
     }

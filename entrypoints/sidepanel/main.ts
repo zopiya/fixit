@@ -1,6 +1,6 @@
 import { MessageType } from '../../src/shared/types';
 import type { FixItAnnotation, Message } from '../../src/shared/types';
-import { normalizeUrl } from '../../src/shared/storage';
+import { normalizeUrl, getStorageKey } from '../../src/shared/storage';
 import { AnnotationRenderer } from './renderer';
 import { exportToMarkdown, copyToClipboard } from './exporter';
 import { t, setLocale, detectLocaleAsync } from '../../src/shared/i18n';
@@ -85,6 +85,19 @@ export async function init(): Promise<void> {
     if (message.type === MessageType.STORAGE_ERROR) {
       showToast(t('sidepanel.storageFull'));
     }
+  });
+
+  // Storage is the source of truth: re-render whenever this page's annotations change
+  // (add / delete / clear), regardless of which context made the change. This is what makes
+  // the side panel's own delete button reflect instantly.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    const change = changes[getStorageKey(currentUrl)];
+    if (!change) return;
+    const next = (change.newValue as { annotations?: FixItAnnotation[] } | undefined)?.annotations;
+    currentAnnotations = next ?? [];
+    renderer.render(currentAnnotations);
+    updateCopyButton();
   });
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
