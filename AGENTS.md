@@ -2,7 +2,7 @@
 
 ## Project Status
 
-**Greenfield** — no source code exists yet. Only documentation is finalized (PRD, TechDoc, DevPlan). Sprint 0 (engineering init) is the first task.
+**Fully implemented** — Chrome extension with content script, background service worker, side panel, playground, settings page, and comprehensive test suite (230+ test cases). V1 core loop complete.
 
 ## Tech Stack
 
@@ -58,37 +58,47 @@ bun run test src/content/locator/css-selector.spec.ts  # Single file
 - Structural-only DOM (no classes/IDs)
 - Edge cases: dynamic content, iframes
 
-## Project Structure (Planned)
+## Project Structure
 
 ```
 fixit/
-├── wxt.config.ts           # WXT configuration
-├── package.json
-├── tsconfig.json
-├── src/
-│   ├── content/            # Content script entry
-│   │   ├── index.ts
-│   │   ├── highlighter.ts
-│   │   ├── overlay.ts
-│   │   └── locator/
-│   │       ├── css-selector.ts
-│   │       └── xpath.ts
-│   ├── background/
-│   │   └── index.ts        # Service worker
-│   ├── sidepanel/
+├── entrypoints/                  # Chrome extension entry points (WXT convention)
+│   ├── content.ts                # Content script — annotation mode, hotkey, messaging
+│   ├── background.ts             # Service worker — message routing, storage, tab sync
+│   ├── sidepanel/                # Side panel — annotation list, export
 │   │   ├── index.html
-│   │   ├── index.ts
+│   │   ├── main.ts
 │   │   ├── renderer.ts
 │   │   └── exporter.ts
-│   ├── playground/
+│   ├── playground/               # Onboarding — 3-step interactive tutorial
 │   │   ├── index.html
-│   │   └── index.ts
-│   └── shared/
-│       ├── types.ts        # FixItAnnotation, MessageType
-│       ├── storage.ts      # chrome.storage.local wrapper
-│       └── messages.ts
-├── assets/icons/           # 16/32/48/128px
-└── dist/                   # Build output
+│   │   └── main.ts
+│   └── settings/                 # Extension settings page
+│       ├── index.html
+│       └── main.ts
+├── src/
+│   ├── content/
+│   │   ├── highlighter.ts        # Hover highlight logic
+│   │   ├── overlay.ts            # Shadow DOM bubbles & badges
+│   │   └── locator/
+│   │       ├── css-selector.ts   # 6-level priority chain CSS Selector generator
+│   │       ├── xpath.ts          # Truncated XPath with anchor detection
+│   │       └── index.ts
+│   ├── shared/
+│   │   ├── types.ts              # FixItAnnotation, MessageType, Message
+│   │   ├── storage.ts            # chrome.storage.local CRUD wrapper
+│   │   ├── settings.ts           # User settings management
+│   │   ├── i18n.ts               # Chinese/English translation system
+│   │   ├── utils.ts              # URL normalization, misc helpers
+│   │   └── icon-state.ts         # Toolbar icon state management
+│   └── styles/
+│       └── global.css            # Tailwind CSS entry point
+├── tests/                        # 16 test files, 230+ test cases
+├── docs/                         # Product & technical documentation
+├── wxt.config.ts                 # WXT configuration (manifest auto-generated)
+├── package.json
+├── tsconfig.json
+└── vitest.config.ts
 ```
 
 ## References
